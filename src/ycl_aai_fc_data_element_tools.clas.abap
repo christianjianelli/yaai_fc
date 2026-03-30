@@ -1,4 +1,4 @@
-CLASS ycl_aai_data_element_tools DEFINITION
+CLASS ycl_aai_fc_data_element_tools DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC .
@@ -80,7 +80,7 @@ ENDCLASS.
 
 
 
-CLASS ycl_aai_data_element_tools IMPLEMENTATION.
+CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
   METHOD create.
 

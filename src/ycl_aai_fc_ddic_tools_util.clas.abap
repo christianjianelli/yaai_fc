@@ -1,4 +1,4 @@
-CLASS ycl_aai_ddic_tools_util DEFINITION
+CLASS ycl_aai_fc_ddic_tools_util DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC .
@@ -24,7 +24,7 @@ ENDCLASS.
 
 
 
-CLASS ycl_aai_ddic_tools_util IMPLEMENTATION.
+CLASS ycl_aai_fc_ddic_tools_util IMPLEMENTATION.
 
   METHOD get_built_in_types_supported.
     r_response = 'The ABAP built-in types supported are: CHAR, INT1, INT2, INT4, DEC, NUMC, STRING, DATS, TIMS, QUAN, UNIT, CURR, CUKY, FLTP, LANG, CLNT.'.
