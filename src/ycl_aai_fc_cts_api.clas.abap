@@ -1,14 +1,14 @@
-class YCL_AAI_FC_CTS_API definition
-  public
-  final
-  create public .
+CLASS ycl_aai_fc_cts_api DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
 
-public section.
-protected section.
-private section.
+  PUBLIC SECTION.
+  PROTECTED SECTION.
+  PRIVATE SECTION.
 ENDCLASS.
 
 
 
-CLASS YCL_AAI_FC_CTS_API IMPLEMENTATION.
+CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
 ENDCLASS.
