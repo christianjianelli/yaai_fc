@@ -32,12 +32,12 @@ CLASS ycl_aai_fc_domain_tools DEFINITION
       IMPORTING
                 i_domain_name       TYPE yde_aai_fc_domain
                 i_short_description TYPE as4text OPTIONAL
-                i_data_type         TYPE yde_aai_fc_data_type OPTIONAL
+                i_data_type         TYPE yde_aai_fc_data_type
                 i_length            TYPE yde_aai_fc_length OPTIONAL
                 i_decimals          TYPE yde_aai_fc_decimals OPTIONAL
                 i_case_sensitive    TYPE yde_aai_fc_case_sensitive OPTIONAL
                 i_transport_request TYPE yde_aai_fc_transport_request
-                i_t_fixed_values    TYPE ytt_aai_fc_domain_fixed_val OPTIONAL
+                i_t_fixed_values    TYPE ytt_aai_fc_domain_fixed_val
       RETURNING VALUE(r_response)   TYPE string.
 
     METHODS delete
@@ -57,6 +57,21 @@ CLASS ycl_aai_fc_domain_tools DEFINITION
       IMPORTING
                 i_domain_name     TYPE yde_aai_fc_domain
       RETURNING VALUE(r_response) TYPE string.
+
+    METHODS exists
+      IMPORTING
+                i_domain_name   TYPE yde_aai_fc_domain
+      RETURNING VALUE(r_exists) TYPE abap_bool.
+
+    METHODS is_locked
+      IMPORTING
+                i_domain_name   TYPE yde_aai_fc_domain
+      RETURNING VALUE(r_locked) TYPE abap_bool.
+
+    METHODS is_active
+      IMPORTING
+                i_domain_name   TYPE yde_aai_fc_domain
+      RETURNING VALUE(r_active) TYPE abap_bool.
 
   PROTECTED SECTION.
 
@@ -118,6 +133,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     ls_domain-datatype = l_data_type.
     ls_domain-leng = i_length.
     ls_domain-decimals = i_decimals.
+    ls_domain-lowercase = i_case_sensitive.
 
     LOOP AT i_t_fixed_values ASSIGNING FIELD-SYMBOL(<ls_fixed_value>).
 
@@ -236,6 +252,136 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
   METHOD update.
 
+    DATA lt_fixed_values TYPE STANDARD TABLE OF dd07v.
+
+    DATA ls_domain TYPE dd01v.
+
+    DATA l_state TYPE ddobjstate VALUE 'A'.
+
+    CLEAR r_response.
+
+    DATA(l_domain_name) = i_domain_name.
+
+    l_domain_name = condense( to_upper( l_domain_name ) ).
+
+    IF me->exists( l_domain_name ) = abap_false.
+      r_response = |Domain { l_domain_name } doesn't exist.|.
+      RETURN.
+    ENDIF.
+
+    IF me->is_locked( l_domain_name ) = abap_true.
+      r_response = |Domain { l_domain_name } is locked.|.
+      RETURN.
+    ENDIF.
+
+    IF me->is_active( l_domain_name ) = abap_false.
+      l_state = 'M'.
+      RETURN.
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_DOMA_GET'
+      EXPORTING
+        name          = l_domain_name    " Name of the Domain to be Read
+        state         = l_state          " Read Status of the Domain
+*       langu         = ' '              " Language in which Texts are Read
+      IMPORTING
+*       gotstate      =                  " Status in which Reading took Place
+        dd01v_wa      = ls_domain        " Header of the Domain
+      TABLES
+        dd07v_tab     = lt_fixed_values  " Fixed Domain Values
+      EXCEPTIONS
+        illegal_input = 1                " Value not Allowed for Parameter
+        OTHERS        = 2.
+
+    IF sy-subrc <> 0.
+      r_response = |Error reading domain { l_domain_name }.|.
+      RETURN.
+    ENDIF.
+
+    IF i_data_type IS NOT INITIAL.
+
+      NEW ycl_aai_fc_ddic_tools_util( )->determine_data_type(
+        EXPORTING
+          i_data_type = i_data_type
+        IMPORTING
+          e_data_type = DATA(l_data_type)
+          e_error     = DATA(l_error)
+      ).
+
+      IF l_data_type IS INITIAL.
+
+        r_response = l_error.
+
+        RETURN.
+
+      ENDIF.
+
+    ENDIF.
+
+    IF i_short_description IS NOT INITIAL.
+      ls_domain-ddtext = i_short_description.
+    ENDIF.
+
+    IF l_data_type IS NOT INITIAL.
+      ls_domain-datatype = l_data_type.
+    ENDIF.
+
+    IF i_length IS NOT INITIAL.
+      ls_domain-leng = i_length.
+    ENDIF.
+
+    IF i_decimals IS NOT INITIAL.
+      ls_domain-decimals = i_decimals.
+    ENDIF.
+
+    ls_domain-lowercase = i_case_sensitive.
+
+    IF i_t_fixed_values IS NOT INITIAL.
+      lt_fixed_values = i_t_fixed_values.
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_DOMA_PUT'
+      EXPORTING
+        name              = l_domain_name    " Name of the Domain to be Written
+        dd01v_wa          = ls_domain        " Header of the Domain
+      TABLES
+        dd07v_tab         = lt_fixed_values  " Fixed Values
+      EXCEPTIONS
+        doma_not_found    = 1                " Header of the Domain could not be Found
+        name_inconsistent = 2                " Name in Sources Inconsistent with NAME
+        doma_inconsistent = 3                " Inconsistent Sources
+        put_failure       = 4                " Write Error (ROLLBACK Recommended)
+        put_refused       = 5                " Write not Allowed
+        OTHERS            = 6.
+
+    IF sy-subrc <> 0.
+
+      r_response = |An error occurred while creating the domain { l_domain_name }.|.
+
+      RETURN.
+
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
+      EXPORTING
+        name        = l_domain_name    " Name of the Data Element to be Activated
+      EXCEPTIONS
+        not_found   = 1                " Data Element not Found
+        put_failure = 2                " Data Element could not be Written
+        OTHERS      = 3.
+
+    IF sy-subrc <> 0.
+
+      r_response = |An error occurred while activating the domain { l_domain_name }.'|.
+
+      RETURN.
+
+    ENDIF.
+
+    COMMIT WORK.
+
+    r_response = |Domain { l_domain_name } updated successfully.|.
+
   ENDMETHOD.
 
   METHOD delete.
@@ -299,6 +445,56 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     ENDCASE.
 
     out->write( l_response ).
+
+  ENDMETHOD.
+
+  METHOD exists.
+
+    SELECT SINGLE @abap_true
+      FROM dd01l
+      INTO @r_exists
+      WHERE domname = @i_domain_name.
+
+  ENDMETHOD.
+
+  METHOD is_active.
+
+    SELECT SINGLE @abap_true
+      FROM dd01l
+      INTO @r_active
+      WHERE domname = @i_domain_name
+        AND as4local = 'A'.
+
+  ENDMETHOD.
+
+  METHOD is_locked.
+
+    DATA: lt_lock_entries TYPE STANDARD TABLE OF seqg3.
+
+    DATA: l_argument TYPE seqg3-garg.
+
+    r_locked = abap_false.
+
+    l_argument = |{ mc_object }{ i_domain_name }|.
+
+    CALL FUNCTION 'ENQUEUE_READ'
+      EXPORTING
+        guname                = '*'
+        garg                  = l_argument
+      TABLES
+        enq                   = lt_lock_entries
+      EXCEPTIONS
+        communication_failure = 0
+        system_failure        = 0
+        OTHERS                = 0.
+
+    READ TABLE lt_lock_entries
+      TRANSPORTING NO FIELDS
+      WITH KEY gobj = 'ESDICT'.
+
+    IF sy-subrc = 0.
+      r_locked = abap_true.
+    ENDIF.
 
   ENDMETHOD.
 
