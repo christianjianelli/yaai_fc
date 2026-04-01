@@ -1,4 +1,4 @@
-CLASS ycl_aai_fc_data_element_tools DEFINITION
+CLASS ycl_aai_fc_domain_tools DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC .
@@ -7,73 +7,56 @@ CLASS ycl_aai_fc_data_element_tools DEFINITION
 
     INTERFACES if_oo_adt_classrun.
 
-    CONSTANTS: mc_pgmid  TYPE e071-pgmid VALUE 'R3TR',
-               mc_object TYPE e071-object VALUE 'DTEL'.
+    CONSTANTS: mc_pgmid  TYPE e071-pgmid  VALUE 'R3TR',
+               mc_object TYPE e071-object VALUE 'DOMA'.
 
     METHODS create
       IMPORTING
-                i_data_element_name TYPE yde_aai_fc_data_element
+                i_domain_name       TYPE yde_aai_fc_domain
                 i_short_description TYPE as4text
-                i_domain_name       TYPE yde_aai_fc_domain OPTIONAL
-                i_data_type         TYPE yde_aai_fc_data_type OPTIONAL
+                i_data_type         TYPE yde_aai_fc_data_type
                 i_length            TYPE yde_aai_fc_length OPTIONAL
                 i_decimals          TYPE yde_aai_fc_decimals OPTIONAL
-                i_label_short       TYPE scrtext_s
-                i_label_medium      TYPE scrtext_m
-                i_label_long        TYPE scrtext_l
-                i_label_heading     TYPE reptext
+                i_case_sensitive    TYPE yde_aai_fc_case_sensitive OPTIONAL
                 i_transport_request TYPE yde_aai_fc_transport_request
                 i_package           TYPE packname
+                i_t_fixed_values    TYPE ytt_aai_fc_domain_fixed_val OPTIONAL
       RETURNING VALUE(r_response)   TYPE string.
 
     METHODS read
       IMPORTING
-                i_data_element_name TYPE yde_aai_fc_data_element
-      RETURNING VALUE(r_response)   TYPE string.
+                i_domain_name     TYPE string
+      RETURNING VALUE(r_response) TYPE string.
 
     METHODS update
       IMPORTING
-                i_data_element_name TYPE yde_aai_fc_data_element
+                i_domain_name       TYPE yde_aai_fc_domain
                 i_short_description TYPE as4text OPTIONAL
-                i_domain_name       TYPE yde_aai_fc_domain OPTIONAL
                 i_data_type         TYPE yde_aai_fc_data_type OPTIONAL
                 i_length            TYPE yde_aai_fc_length OPTIONAL
                 i_decimals          TYPE yde_aai_fc_decimals OPTIONAL
-                i_label_short       TYPE scrtext_s OPTIONAL
-                i_label_medium      TYPE scrtext_m OPTIONAL
-                i_label_long        TYPE scrtext_l OPTIONAL
-                i_label_heading     TYPE reptext OPTIONAL
+                i_case_sensitive    TYPE yde_aai_fc_case_sensitive OPTIONAL
                 i_transport_request TYPE yde_aai_fc_transport_request
+                i_t_fixed_values    TYPE ytt_aai_fc_domain_fixed_val OPTIONAL
       RETURNING VALUE(r_response)   TYPE string.
 
     METHODS delete
       IMPORTING
-                i_data_element_name TYPE yde_aai_fc_data_element
+                i_domain_name       TYPE yde_aai_fc_domain
                 i_transport_request TYPE yde_aai_fc_transport_request
       RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS search
+      IMPORTING
+                i_domain_name     TYPE yde_aai_fc_domain OPTIONAL
+                i_description     TYPE as4text OPTIONAL
+                i_package         TYPE packname
+      RETURNING VALUE(r_response) TYPE string.
 
     METHODS activate
       IMPORTING
-                i_data_element_name TYPE yde_aai_fc_data_element
-      RETURNING VALUE(r_response)   TYPE string.
-
-    METHODS set_translation
-      IMPORTING
-                i_data_element_name TYPE yde_aai_fc_data_element
-                i_transport_request TYPE yde_aai_fc_transport_request
-                i_language          TYPE spras
-                i_short_description TYPE as4text
-                i_label_short       TYPE scrtext_s
-                i_label_medium      TYPE scrtext_m
-                i_label_long        TYPE scrtext_l
-                i_label_heading     TYPE reptext
-      RETURNING VALUE(r_response)   TYPE string.
-
-    METHODS get_translation
-      IMPORTING
-                i_data_element_name TYPE string
-                i_language          TYPE spras
-      RETURNING VALUE(r_response)   TYPE string.
+                i_domain_name     TYPE yde_aai_fc_domain
+      RETURNING VALUE(r_response) TYPE string.
 
   PROTECTED SECTION.
 
@@ -83,17 +66,19 @@ ENDCLASS.
 
 
 
-CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
+CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
   METHOD create.
 
-    DATA ls_data_element TYPE dd04v.
+    DATA lt_fixed_values TYPE STANDARD TABLE OF dd07v.
+
+    DATA ls_domain TYPE dd01v.
 
     DATA l_rc TYPE i.
 
-    DATA(l_data_element) = i_data_element_name.
+    DATA(l_domain_name) = i_domain_name.
 
-    l_data_element = condense( to_upper( l_data_element ) ).
+    l_domain_name = condense( to_upper( l_domain_name ) ).
 
     DATA(l_transport_request) = i_transport_request.
 
@@ -123,62 +108,61 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     ENDIF.
 
-    ls_data_element-rollname = l_data_element.
-    ls_data_element-ddlanguage = sy-langu.
-    ls_data_element-domname = condense( to_upper( i_domain_name ) ).
-    ls_data_element-ddtext = i_short_description.
-    ls_data_element-reptext = i_label_heading.
-    ls_data_element-scrtext_s = i_label_short.
-    ls_data_element-scrtext_m = i_label_medium.
-    ls_data_element-scrtext_l = i_label_long.
-    ls_data_element-as4user = sy-uname.
-    ls_data_element-as4date = sy-datum.
-    ls_data_element-as4time = sy-uzeit.
-    ls_data_element-dtelmaster = sy-langu.
-    ls_data_element-datatype = l_data_type.
-    ls_data_element-leng = i_length.
-    ls_data_element-decimals = i_decimals.
-    ls_data_element-outputlen = i_length.
-    ls_data_element-headlen = 55.
-    ls_data_element-scrlen1 = 10.
-    ls_data_element-scrlen2 = 20.
-    ls_data_element-scrlen3 = 40.
+    ls_domain-domname = l_domain_name.
+    ls_domain-ddlanguage = sy-langu.
+    ls_domain-domname = condense( to_upper( i_domain_name ) ).
+    ls_domain-ddtext = i_short_description.
+    ls_domain-as4user = sy-uname.
+    ls_domain-as4date = sy-datum.
+    ls_domain-as4time = sy-uzeit.
+    ls_domain-datatype = l_data_type.
+    ls_domain-leng = i_length.
+    ls_domain-decimals = i_decimals.
 
-    CALL FUNCTION 'DDIF_DTEL_PUT'
+    LOOP AT i_t_fixed_values ASSIGNING FIELD-SYMBOL(<ls_fixed_value>).
+
+      APPEND VALUE #( domname = l_domain_name
+                      valpos = sy-tabix
+                      ddlanguage = sy-langu
+                      domvalue_l = <ls_fixed_value>-value
+                      domvalue_h = ''
+                      ddtext = <ls_fixed_value>-description ) TO lt_fixed_values.
+
+    ENDLOOP.
+
+    CALL FUNCTION 'DDIF_DOMA_PUT'
       EXPORTING
-        name              = l_data_element   " Name of the Data Element to be Written
-        dd04v_wa          = ls_data_element  " Sources of the Data Element
+        name              = l_domain_name    " Name of the Domain to be Written
+        dd01v_wa          = ls_domain        " Header of the Domain
+      TABLES
+        dd07v_tab         = lt_fixed_values  " Fixed Values
       EXCEPTIONS
-        dtel_not_found    = 1                " No Sources for the Data Element
+        doma_not_found    = 1                " Header of the Domain could not be Found
         name_inconsistent = 2                " Name in Sources Inconsistent with NAME
-        dtel_inconsistent = 3                " Inconsistent Sources
+        doma_inconsistent = 3                " Inconsistent Sources
         put_failure       = 4                " Write Error (ROLLBACK Recommended)
         put_refused       = 5                " Write not Allowed
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
 
-      r_response = |An error occurred while creating the data element { l_data_element }.|.
+      r_response = |An error occurred while creating the domain { l_domain_name }.|.
 
       RETURN.
 
     ENDIF.
 
-    CALL FUNCTION 'DDIF_DTEL_ACTIVATE'
+    CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
       EXPORTING
-        name        = l_data_element    " Name of the Data Element to be Activated
-*       auth_chk    = 'X'              " 'X': Perform Author. Check for DB Operations
-*       prid        = -1               " ID for Log Writer
-      IMPORTING
-        rc          = l_rc        " Result of Activation
+        name        = l_domain_name    " Name of the Data Element to be Activated
       EXCEPTIONS
         not_found   = 1                " Data Element not Found
         put_failure = 2                " Data Element could not be Written
         OTHERS      = 3.
 
-    IF sy-subrc <> 0 OR l_rc IS NOT INITIAL.
+    IF sy-subrc <> 0.
 
-      r_response = |An error occurred while activating the data element { l_data_element }.'|.
+      r_response = |An error occurred while activating the domain { l_domain_name }.'|.
 
       RETURN.
 
@@ -189,7 +173,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         wi_test_modus                  = ' '
         wi_tadir_pgmid                 = mc_pgmid
         wi_tadir_object                = mc_object
-        wi_tadir_obj_name              = CONV sobj_name( l_data_element )
+        wi_tadir_obj_name              = CONV sobj_name( l_domain_name )
         wi_tadir_author                = sy-uname
         wi_tadir_devclass              = l_package
         wi_set_genflag                 = abap_false
@@ -222,7 +206,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     IF sy-subrc <> 0.
 
-      r_response = 'An error occurred while creating the TADIR entry for the newly created data element'.
+      r_response = |An error occurred while creating the TADIR entry for the newly created domain { l_domain_name } .|.
 
       RETURN.
 
@@ -233,7 +217,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         i_s_object = VALUE #( trkorr = l_transport_request
                               pgmid = mc_pgmid
                               object = mc_object
-                              obj_name = l_data_element )
+                              obj_name = l_domain_name )
       IMPORTING
         e_order    = DATA(l_order)
         e_task     = DATA(l_task)
@@ -242,7 +226,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     COMMIT WORK.
 
-    r_response = |Data element { l_data_element } created successfully.|.
+    r_response = |Domain { l_domain_name } created successfully.|.
 
   ENDMETHOD.
 
@@ -258,36 +242,32 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD get_translation.
-
-  ENDMETHOD.
-
-  METHOD set_translation.
-
-  ENDMETHOD.
-
   METHOD activate.
 
     CLEAR r_response.
 
-    DATA(l_data_element) = i_data_element_name.
+    DATA(l_domain) = i_domain_name.
 
-    l_data_element = condense( to_upper( l_data_element ) ).
+    l_domain = condense( to_upper( l_domain ) ).
 
-    CALL FUNCTION 'DDIF_DTEL_ACTIVATE'
+    CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
       EXPORTING
-        name        = l_data_element            " Name of the Data Element to be Activated
+        name        = l_domain            " Name of the Data Element to be Activated
       EXCEPTIONS
         not_found   = 1                         " Data Element not Found
         put_failure = 2                         " Data Element could not be Written
         OTHERS      = 3.
 
     IF sy-subrc <> 0.
-      r_response = |An error occurred while activating the data element { l_data_element }.'|.
+      r_response = |An error occurred while activating the domain { l_domain }.'|.
       RETURN.
     ENDIF.
 
-    r_response = |Data element { l_data_element } activated successfully.|.
+    r_response = |Domain { l_domain } activated successfully.|.
+
+  ENDMETHOD.
+
+  METHOD search.
 
   ENDMETHOD.
 
@@ -303,18 +283,15 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
         me->create(
           EXPORTING
-            i_data_element_name = 'ZDE_TEST_DDIF_DTEL_PUT4'
-            i_short_description = 'Test DTEL create via DDIF_DTEL_PUT'
-*            i_domain_name       =
+            i_domain_name       = 'ZDO_TEST_DDIF_DOMA_PUT'
+            i_short_description = 'Test DDIF_DOMA_PUT'
             i_data_type         = 'CHAR'
             i_length            = 30
-*            i_decimals          =
-            i_label_short       = 'DTEL_PUT'
-            i_label_medium      = 'DDIF_DTEL_PUT'
-            i_label_long        = 'Test DTEL create via DDIF_DTEL_PUT'
-            i_label_heading     = 'Test DTEL create via DDIF_DTEL_PUT'
+*            i_decimals          = 2
+*            i_case_sensitive    =
             i_transport_request = 'NPLK900133'
             i_package           = 'Z001'
+            i_t_fixed_values    = VALUE #( ( value = 'A' description = 'Description value A' ) )
           RECEIVING
             r_response          = l_response
         ).

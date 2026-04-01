@@ -30,7 +30,7 @@ CLASS ycl_aai_fc_ddic_tools_util IMPLEMENTATION.
     r_response = 'The ABAP built-in types supported are: CHAR, INT1, INT2, INT4, DEC, NUMC, STRING, DATS, TIMS, QUAN, UNIT, CURR, CUKY, FLTP, LANG, CLNT.'.
     r_response = |{ cl_abap_char_utilities=>newline }{ r_response }The types: CHAR AND NUMC require a length.|.
     r_response = |{ cl_abap_char_utilities=>newline }{ r_response }The types: DEC, QUAN and CURR require a length and decimals, where decimals can be zero.|.
-    r_response = |{ cl_abap_char_utilities=>newline }{ r_response }The type STRING can have a length but it must be greater than or equal to 256, or 0 for a string with unlimited length.|.
+*    r_response = |{ cl_abap_char_utilities=>newline }{ r_response }The type STRING can have a length but it must be greater than or equal to 256, or 0 for a string with unlimited length.|.
   ENDMETHOD.
 
   METHOD get_built_in_types_response.
@@ -68,6 +68,10 @@ CLASS ycl_aai_fc_ddic_tools_util IMPLEMENTATION.
         e_data_type = 'STRG'.
 
       WHEN OTHERS.
+
+        e_error = me->get_built_in_types_supported( ).
+
+        e_error = 'The data type ' && l_data_type && ' is not supported. ' && cl_abap_char_utilities=>newline && e_error.
 
         RETURN.
 
