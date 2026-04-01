@@ -25,7 +25,7 @@ CLASS ycl_aai_fc_domain_tools DEFINITION
 
     METHODS read
       IMPORTING
-                i_domain_name     TYPE string
+                i_domain_name     TYPE yde_aai_fc_domain
       RETURNING VALUE(r_response) TYPE string.
 
     METHODS update
@@ -48,10 +48,10 @@ CLASS ycl_aai_fc_domain_tools DEFINITION
 
     METHODS search
       IMPORTING
-                i_domain_name     TYPE yde_aai_fc_domain OPTIONAL
-                i_description     TYPE as4text OPTIONAL
-                i_package         TYPE packname
-      RETURNING VALUE(r_response) TYPE string.
+                i_package           TYPE packname
+                i_domain_name       TYPE yde_aai_fc_domain OPTIONAL
+                i_short_description TYPE as4text OPTIONAL
+      RETURNING VALUE(r_response)   TYPE string.
 
     METHODS activate
       IMPORTING
@@ -248,6 +248,76 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
   METHOD read.
 
+    DATA lt_fixed_values TYPE STANDARD TABLE OF dd07v.
+
+    DATA ls_domain TYPE dd01v.
+
+    DATA l_state TYPE ddobjstate.
+
+    DATA(l_domain_name) = i_domain_name.
+
+    l_domain_name = condense( to_upper( l_domain_name ) ).
+
+    SELECT as4local, as4vers
+      FROM dd01l
+      INTO TABLE @DATA(lt_dd01l)
+      WHERE domname = @l_domain_name.
+
+    IF sy-subrc <> 0.
+      r_response = |Domain { l_domain_name } doesn't exist.|.
+      RETURN.
+    ENDIF.
+
+    READ TABLE lt_dd01l INTO DATA(ls_dd01l)
+      WITH KEY as4vers = 'A'.
+
+    IF me->is_active( l_domain_name ) = abap_true.
+      l_state = 'A'.
+    ENDIF.
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_domain_name
+      INTO @DATA(ls_tadir).
+
+    CALL FUNCTION 'DDIF_DOMA_GET'
+      EXPORTING
+        name          = l_domain_name           " Name of the Domain to be Read
+        state         = l_state                 " Read Status of the Domain
+        langu         = ls_tadir-masterlang     " Language in which Texts are Read
+      IMPORTING
+        gotstate      = l_state                 " Status in which Reading took Place
+        dd01v_wa      = ls_domain               " Header of the Domain
+      TABLES
+        dd07v_tab     = lt_fixed_values         " Fixed Domain Values
+      EXCEPTIONS
+        illegal_input = 1                       " Value not Allowed for Parameter
+        OTHERS        = 2.
+
+
+    r_response = |Domain: { l_domain_name }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Description: { ls_domain-ddtext }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Type: { ls_domain-datatype }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Length: { ls_domain-leng ALPHA = OUT }|.
+
+    IF ls_domain-datatype = 'DEC' OR ls_domain-datatype = 'QUAN' OR ls_domain-datatype = 'CURR'.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Decimals: { ls_domain-decimals ALPHA = OUT }|.
+    ENDIF.
+
+    IF l_state <> 'A'.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }WARNING: the domain is not active.|.
+    ENDIF.
+
+    IF lt_fixed_values IS NOT INITIAL.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Fixed values:|.
+    ENDIF.
+
+    LOOP AT lt_fixed_values ASSIGNING FIELD-SYMBOL(<ls_fixed_values>).
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Value:{ <ls_fixed_values>-domvalue_l } Text:{ <ls_fixed_values>-ddtext }|.
+    ENDLOOP.
+
   ENDMETHOD.
 
   METHOD update.
@@ -279,22 +349,29 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    SELECT SINGLE pgmid, object, obj_name, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_pgmid
+        AND obj_name = @l_domain_name
+      INTO @DATA(ls_tadir).
+
     CALL FUNCTION 'DDIF_DOMA_GET'
       EXPORTING
-        name          = l_domain_name    " Name of the Domain to be Read
-        state         = l_state          " Read Status of the Domain
-*       langu         = ' '              " Language in which Texts are Read
+        name          = l_domain_name           " Name of the Domain to be Read
+        state         = l_state                 " Read Status of the Domain
+        langu         = ls_tadir-masterlang     " Language in which Texts are Read
       IMPORTING
-*       gotstate      =                  " Status in which Reading took Place
-        dd01v_wa      = ls_domain        " Header of the Domain
+        gotstate      = l_state                 " Status in which Reading took Place
+        dd01v_wa      = ls_domain               " Header of the Domain
       TABLES
-        dd07v_tab     = lt_fixed_values  " Fixed Domain Values
+        dd07v_tab     = lt_fixed_values         " Fixed Domain Values
       EXCEPTIONS
-        illegal_input = 1                " Value not Allowed for Parameter
+        illegal_input = 1                       " Value not Allowed for Parameter
         OTHERS        = 2.
 
     IF sy-subrc <> 0.
-      r_response = |Error reading domain { l_domain_name }.|.
+      r_response = |Error while reading domain { l_domain_name }.|.
       RETURN.
     ENDIF.
 
@@ -385,7 +462,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD delete.
-
+    "TODO
   ENDMETHOD.
 
   METHOD activate.
@@ -415,36 +492,61 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
   METHOD search.
 
-  ENDMETHOD.
+    CLEAR r_response.
 
-  METHOD if_oo_adt_classrun~main.
+    DATA(l_package) = i_package.
 
-    DATA l_response TYPE string.
+    l_package = condense( to_upper( l_package ) ).
 
-    DATA(l_create) = abap_true.
+    SELECT pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND devclass = @l_package
+      INTO TABLE @DATA(lt_tadir).
 
-    CASE abap_true.
+    IF sy-subrc <> 0.
+      RETURN.
+    ENDIF.
 
-      WHEN l_create.
+    LOOP AT lt_tadir ASSIGNING FIELD-SYMBOL(<ls_tadir>).
 
-        me->create(
-          EXPORTING
-            i_domain_name       = 'ZDO_TEST_DDIF_DOMA_PUT'
-            i_short_description = 'Test DDIF_DOMA_PUT'
-            i_data_type         = 'CHAR'
-            i_length            = 30
-*            i_decimals          = 2
-*            i_case_sensitive    =
-            i_transport_request = 'NPLK900133'
-            i_package           = 'Z001'
-            i_t_fixed_values    = VALUE #( ( value = 'A' description = 'Description value A' ) )
-          RECEIVING
-            r_response          = l_response
-        ).
+      IF i_domain_name IS NOT INITIAL.
 
-    ENDCASE.
+        IF NOT <ls_tadir>-obj_name CP i_domain_name.
+          CONTINUE.
+        ENDIF.
 
-    out->write( l_response ).
+      ENDIF.
+
+      SELECT SINGLE domname, ddlanguage, datatype, leng, decimals, ddtext
+        FROM dd01v
+        WHERE domname = @<ls_tadir>-obj_name
+          AND ddlanguage = @<ls_tadir>-masterlang
+        INTO @DATA(ls_dd01v).
+
+      IF i_short_description IS NOT INITIAL.
+
+        IF NOT ls_dd01v-ddtext CP i_short_description.
+          CONTINUE.
+        ENDIF.
+
+      ENDIF.
+
+      IF r_response IS NOT INITIAL.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }|.
+      ENDIF.
+
+      r_response = |{ r_response }Domain: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Description: { ls_dd01v-ddtext }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Type: { ls_dd01v-datatype }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Length: { ls_dd01v-leng ALPHA = OUT }|.
+
+      IF ls_dd01v-datatype = 'DEC' OR ls_dd01v-datatype = 'QUAN' OR ls_dd01v-datatype = 'CURR'.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Decimals: { ls_dd01v-decimals ALPHA = OUT }|.
+      ENDIF.
+
+    ENDLOOP.
 
   ENDMETHOD.
 
@@ -495,6 +597,47 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     IF sy-subrc = 0.
       r_locked = abap_true.
     ENDIF.
+
+  ENDMETHOD.
+
+  METHOD if_oo_adt_classrun~main.
+
+    DATA l_response TYPE string.
+
+    DATA(l_create) = abap_false.
+    DATA(l_read) = abap_false.
+    DATA(l_search) = abap_true.
+
+    CASE abap_true.
+
+      WHEN l_create.
+
+        me->create(
+          EXPORTING
+            i_domain_name       = 'ZDO_TEST_DDIF_DOMA_PUT2'
+            i_short_description = 'Test DDIF_DOMA_PUT 2'
+            i_data_type         = 'CHAR'
+            i_length            = 30
+*            i_decimals          = 2
+*            i_case_sensitive    =
+            i_transport_request = 'NPLK900133'
+            i_package           = 'Z001'
+            i_t_fixed_values    = VALUE #( ( value = 'A' description = 'Description value A' ) )
+          RECEIVING
+            r_response          = l_response
+        ).
+
+      WHEN l_read.
+
+        l_response = me->read( i_domain_name = 'ZDO_TEST_DDIF_DOMA_PUT' ).
+
+      WHEN l_search.
+
+        l_response = me->search( i_package = 'Z001' ).
+
+    ENDCASE.
+
+    out->write( l_response ).
 
   ENDMETHOD.
 
