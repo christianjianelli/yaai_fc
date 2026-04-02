@@ -99,6 +99,16 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     l_transport_request = condense( to_upper( l_transport_request ) ).
 
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
     DATA(l_package) = i_package.
 
     l_package = condense( to_upper( l_package ) ).
@@ -228,19 +238,27 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     ENDIF.
 
-    NEW ycl_aai_fc_cts_api( )->insert_object(
+    COMMIT WORK.
+
+    lo_cts_api->insert_object(
       EXPORTING
         i_s_object = VALUE #( trkorr = l_transport_request
-                              pgmid = mc_pgmid
                               object = mc_object
                               obj_name = l_domain_name )
+        i_object_class = 'DICT'
+        i_package = l_package
+        i_language = sy-langu
       IMPORTING
-        e_order    = DATA(l_order)
-        e_task     = DATA(l_task)
         e_inserted = DATA(l_inserted)
     ).
 
-    COMMIT WORK.
+    IF l_inserted = abap_false.
+
+      r_response = |Domain { l_domain_name } created successfully but it was not possible to add it to the transport request { l_transport_request }.|.
+
+      RETURN.
+
+    ENDIF.
 
     r_response = |Domain { l_domain_name } created successfully.|.
 
@@ -330,6 +348,20 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     CLEAR r_response.
 
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
     DATA(l_domain_name) = i_domain_name.
 
     l_domain_name = condense( to_upper( l_domain_name ) ).
@@ -349,10 +381,10 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    SELECT SINGLE pgmid, object, obj_name, masterlang
+    SELECT SINGLE pgmid, object, obj_name, masterlang, devclass
       FROM tadir
       WHERE pgmid = @mc_pgmid
-        AND object = @mc_pgmid
+        AND object = @mc_object
         AND obj_name = @l_domain_name
       INTO @DATA(ls_tadir).
 
@@ -405,6 +437,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     IF i_length IS NOT INITIAL.
       ls_domain-leng = i_length.
+      ls_domain-outputlen = i_length.
     ENDIF.
 
     IF i_decimals IS NOT INITIAL.
@@ -414,7 +447,20 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     ls_domain-lowercase = i_case_sensitive.
 
     IF i_t_fixed_values IS NOT INITIAL.
-      lt_fixed_values = i_t_fixed_values.
+
+      FREE lt_fixed_values.
+
+      LOOP AT i_t_fixed_values ASSIGNING FIELD-SYMBOL(<ls_fixed_value>).
+
+        APPEND VALUE #( domname = l_domain_name
+                        valpos = sy-tabix
+                        ddlanguage = ls_tadir-masterlang
+                        domvalue_l = <ls_fixed_value>-value
+                        domvalue_h = ''
+                        ddtext = <ls_fixed_value>-description ) TO lt_fixed_values.
+
+      ENDLOOP.
+
     ENDIF.
 
     CALL FUNCTION 'DDIF_DOMA_PUT'
@@ -456,6 +502,26 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     ENDIF.
 
     COMMIT WORK.
+
+    lo_cts_api->insert_object(
+      EXPORTING
+        i_s_object = VALUE #( trkorr = l_transport_request
+                              object = mc_object
+                              obj_name = l_domain_name )
+        i_object_class = 'DICT'
+        i_package = ls_tadir-devclass
+        i_language = sy-langu
+      IMPORTING
+        e_inserted = DATA(l_inserted)
+    ).
+
+    IF l_inserted = abap_false.
+
+      r_response = |Domain { l_domain_name } updated successfully but it was not possible to add it to the transport request { l_transport_request }.|.
+
+      RETURN.
+
+    ENDIF.
 
     r_response = |Domain { l_domain_name } updated successfully.|.
 
@@ -606,30 +672,44 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     DATA(l_create) = abap_false.
     DATA(l_read) = abap_false.
-    DATA(l_search) = abap_true.
+    DATA(l_update) = abap_true.
+    DATA(l_search) = abap_false.
 
     CASE abap_true.
 
       WHEN l_create.
 
-        me->create(
+        l_response = me->create(
           EXPORTING
-            i_domain_name       = 'ZDO_TEST_DDIF_DOMA_PUT2'
-            i_short_description = 'Test DDIF_DOMA_PUT 2'
+            i_domain_name       = 'ZDO_TEST_DDIF_DOMA_PUT3'
+            i_short_description = 'Test DDIF_DOMA_PUT'
             i_data_type         = 'CHAR'
             i_length            = 30
-*            i_decimals          = 2
+*            i_decimals          =
 *            i_case_sensitive    =
-            i_transport_request = 'NPLK900133'
+            i_transport_request = 'NPLK900132'
             i_package           = 'Z001'
             i_t_fixed_values    = VALUE #( ( value = 'A' description = 'Description value A' ) )
-          RECEIVING
-            r_response          = l_response
         ).
 
       WHEN l_read.
 
         l_response = me->read( i_domain_name = 'ZDO_TEST_DDIF_DOMA_PUT' ).
+
+      WHEN l_update.
+
+        l_response = me->update(
+          EXPORTING
+            i_domain_name       = 'ZDO_TEST_DDIF_DOMA_PUT3'
+            i_short_description = 'Test DDIF_DOMA_PUT Upd'
+            i_data_type         = 'CHAR'
+            i_length            = 35
+*            i_decimals          =
+*            i_case_sensitive    =
+            i_transport_request = 'NPLK900132'
+            i_t_fixed_values    = VALUE #( ( value = 'A' description = 'Description value A' )
+                                           ( value = 'B' description = 'Description value B' ) )
+        ).
 
       WHEN l_search.
 
