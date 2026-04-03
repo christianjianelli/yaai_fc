@@ -178,22 +178,6 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     ENDIF.
 
-    CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
-      EXPORTING
-        name        = l_domain_name    " Name of the Data Element to be Activated
-      EXCEPTIONS
-        not_found   = 1                " Data Element not Found
-        put_failure = 2                " Data Element could not be Written
-        OTHERS      = 3.
-
-    IF sy-subrc <> 0.
-
-      r_response = |An error occurred while activating the domain { l_domain_name }.'|.
-
-      RETURN.
-
-    ENDIF.
-
     CALL FUNCTION 'TR_TADIR_INTERFACE'
       EXPORTING
         wi_test_modus                  = ' '
@@ -232,9 +216,25 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     IF sy-subrc <> 0.
 
-      r_response = |An error occurred while creating the TADIR entry for the newly created domain { l_domain_name } .|.
+      r_response = |An error occurred while creating the TADIR entry for the newly created domain { l_domain_name }.|.
 
       RETURN.
+
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
+      EXPORTING
+        name        = l_domain_name    " Name of the Data Element to be Activated
+      EXCEPTIONS
+        not_found   = 1                " Data Element not Found
+        put_failure = 2                " Data Element could not be Written
+        OTHERS      = 3.
+
+    IF sy-subrc <> 0.
+
+      r_response = |An error occurred while activating the domain { l_domain_name }. { cl_abap_char_utilities=>newline }|.
+
+      DATA(l_inactive) = abap_true.
 
     ENDIF.
 
@@ -254,13 +254,17 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     IF l_inserted = abap_false.
 
-      r_response = |Domain { l_domain_name } created successfully but it was not possible to add it to the transport request { l_transport_request }.|.
+      r_response = |{ r_response }Domain { l_domain_name } created but it was not possible to add it to the transport request { l_transport_request }.|.
 
       RETURN.
 
     ENDIF.
 
-    r_response = |Domain { l_domain_name } created successfully.|.
+    IF l_inactive = abap_false.
+      r_response = |Domain { l_domain_name } created successfully.|.
+    ELSE.
+      r_response = |{ r_response }Domain { l_domain_name } created.|.
+    ENDIF.
 
   ENDMETHOD.
 
@@ -314,6 +318,10 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
         illegal_input = 1                       " Value not Allowed for Parameter
         OTHERS        = 2.
 
+    IF sy-subrc <> 0.
+      r_response = |Error while reading domain { l_domain_name }.|.
+      RETURN.
+    ENDIF.
 
     r_response = |Domain: { l_domain_name }{ cl_abap_char_utilities=>newline }|.
     r_response = |{ r_response }Description: { ls_domain-ddtext }{ cl_abap_char_utilities=>newline }|.
@@ -495,9 +503,9 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     IF sy-subrc <> 0.
 
-      r_response = |An error occurred while activating the domain { l_domain_name }.'|.
+      r_response = |An error occurred while activating the domain { l_domain_name }.{ cl_abap_char_utilities=>newline }|.
 
-      RETURN.
+      DATA(l_inactive) = abap_true.
 
     ENDIF.
 
@@ -517,13 +525,21 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     IF l_inserted = abap_false.
 
-      r_response = |Domain { l_domain_name } updated successfully but it was not possible to add it to the transport request { l_transport_request }.|.
+      r_response = |{ r_response }Domain { l_domain_name } updated but it was not possible to add it to the transport request { l_transport_request }.|.
 
       RETURN.
 
     ENDIF.
 
-    r_response = |Domain { l_domain_name } updated successfully.|.
+    IF l_inactive = abap_false.
+
+      r_response = |Domain { l_domain_name } updated successfully.|.
+
+    ELSE.
+
+      r_response = |{ r_response }Domain { l_domain_name } updated but it was not activated..|.
+
+    ENDIF.
 
   ENDMETHOD.
 

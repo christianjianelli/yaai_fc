@@ -35,9 +35,9 @@ CLASS ycl_aai_fc_data_element_tools DEFINITION
       IMPORTING
                 i_data_element_name TYPE yde_aai_fc_data_element
                 i_short_description TYPE as4text OPTIONAL
-                i_domain_name       TYPE yde_aai_fc_domain OPTIONAL
-                i_data_type         TYPE yde_aai_fc_data_type OPTIONAL
-                i_length            TYPE yde_aai_fc_length OPTIONAL
+                i_domain_name       TYPE yde_aai_fc_domain
+                i_data_type         TYPE yde_aai_fc_data_type
+                i_length            TYPE yde_aai_fc_length
                 i_decimals          TYPE yde_aai_fc_decimals OPTIONAL
                 i_label_short       TYPE scrtext_s OPTIONAL
                 i_label_medium      TYPE scrtext_m OPTIONAL
@@ -71,9 +71,24 @@ CLASS ycl_aai_fc_data_element_tools DEFINITION
 
     METHODS get_translation
       IMPORTING
-                i_data_element_name TYPE string
+                i_data_element_name TYPE yde_aai_fc_data_element
                 i_language          TYPE spras
       RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS exists
+      IMPORTING
+                i_data_element_name TYPE yde_aai_fc_data_element
+      RETURNING VALUE(r_exists)     TYPE abap_bool.
+
+    METHODS is_locked
+      IMPORTING
+                i_data_element_name TYPE yde_aai_fc_data_element
+      RETURNING VALUE(r_locked)     TYPE abap_bool.
+
+    METHODS is_active
+      IMPORTING
+                i_data_element_name TYPE yde_aai_fc_data_element
+      RETURNING VALUE(r_active)     TYPE abap_bool.
 
   PROTECTED SECTION.
 
@@ -102,6 +117,16 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     DATA(l_package) = i_package.
 
     l_package = condense( to_upper( l_package ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
 
     IF i_data_type IS NOT INITIAL.
 
@@ -164,26 +189,6 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     ENDIF.
 
-    CALL FUNCTION 'DDIF_DTEL_ACTIVATE'
-      EXPORTING
-        name        = l_data_element    " Name of the Data Element to be Activated
-*       auth_chk    = 'X'              " 'X': Perform Author. Check for DB Operations
-*       prid        = -1               " ID for Log Writer
-      IMPORTING
-        rc          = l_rc        " Result of Activation
-      EXCEPTIONS
-        not_found   = 1                " Data Element not Found
-        put_failure = 2                " Data Element could not be Written
-        OTHERS      = 3.
-
-    IF sy-subrc <> 0 OR l_rc IS NOT INITIAL.
-
-      r_response = |An error occurred while activating the data element { l_data_element }.'|.
-
-      RETURN.
-
-    ENDIF.
-
     CALL FUNCTION 'TR_TADIR_INTERFACE'
       EXPORTING
         wi_test_modus                  = ' '
@@ -228,34 +233,318 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     ENDIF.
 
-    NEW ycl_aai_fc_cts_api( )->insert_object(
+    CALL FUNCTION 'DDIF_DTEL_ACTIVATE'
       EXPORTING
-        i_s_object = VALUE #( trkorr = l_transport_request
-                              pgmid = mc_pgmid
-                              object = mc_object
-                              obj_name = l_data_element )
+        name        = l_data_element    " Name of the Data Element to be Activated
+*       auth_chk    = 'X'              " 'X': Perform Author. Check for DB Operations
+*       prid        = -1               " ID for Log Writer
       IMPORTING
-        e_order    = DATA(l_order)
-        e_task     = DATA(l_task)
-        e_inserted = DATA(l_inserted)
-    ).
+        rc          = l_rc        " Result of Activation
+      EXCEPTIONS
+        not_found   = 1                " Data Element not Found
+        put_failure = 2                " Data Element could not be Written
+        OTHERS      = 3.
+
+    IF sy-subrc <> 0 OR l_rc IS NOT INITIAL.
+
+      r_response = |An error occurred while activating the data element { l_data_element }.'|.
+
+      DATA(l_inactive) = abap_true.
+
+    ENDIF.
 
     COMMIT WORK.
 
-    r_response = |Data element { l_data_element } created successfully.|.
+    lo_cts_api->insert_object(
+      EXPORTING
+        i_s_object = VALUE #( trkorr = l_transport_request
+                              object = mc_object
+                              obj_name = l_data_element )
+        i_object_class = 'DICT'
+        i_package = l_package
+        i_language = sy-langu
+      IMPORTING
+        e_inserted = DATA(l_inserted)
+    ).
+
+    IF l_inserted = abap_false.
+
+      r_response = |{ r_response }Data element { l_data_element } created but it was not possible to add it to the transport request { l_transport_request }.|.
+
+      RETURN.
+
+    ENDIF.
+
+    IF l_inactive = abap_false.
+      r_response = |Data element { l_data_element } created successfully.|.
+    ELSE.
+      r_response = |{ r_response }Data element { l_data_element } created.|.
+    ENDIF.
 
   ENDMETHOD.
 
   METHOD read.
 
+    DATA ls_data_element TYPE dd04v.
+
+    DATA l_state TYPE ddobjstate.
+
+    DATA(l_data_element) = i_data_element_name.
+
+    l_data_element = condense( to_upper( l_data_element ) ).
+
+    SELECT as4local, as4vers
+      FROM dd04l
+      INTO TABLE @DATA(lt_dd01l)
+      WHERE rollname = @l_data_element.
+
+    IF sy-subrc <> 0.
+      r_response = |Data Element { l_data_element } doesn't exist.|.
+      RETURN.
+    ENDIF.
+
+    READ TABLE lt_dd01l INTO DATA(ls_dd01l)
+      WITH KEY as4vers = 'A'.
+
+    IF me->is_active( l_data_element ) = abap_true.
+      l_state = 'A'.
+    ENDIF.
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_data_element
+      INTO @DATA(ls_tadir).
+
+    CALL FUNCTION 'DDIF_DTEL_GET'
+      EXPORTING
+        name          = l_data_element                 " Name of the Data Element to be Read
+        state         = l_state                        " Read Status of the Data Element
+        langu         = ls_tadir-masterlang            " Language in which Texts are Read
+      IMPORTING
+        gotstate      = l_state                        " Status in which Reading took Place
+        dd04v_wa      = ls_data_element                " Header of the Data Element
+      EXCEPTIONS
+        illegal_input = 1                              " Value not Allowed for Parameter
+        OTHERS        = 2.
+
+    IF sy-subrc <> 0.
+      r_response = |Error while reading data element { l_data_element }.|.
+      RETURN.
+    ENDIF.
+
+    r_response = |Data Element Name: { l_data_element }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Description: { ls_data_element-ddtext }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Label short: { ls_data_element-scrtext_s }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Label medium: { ls_data_element-scrtext_m }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Label long: { ls_data_element-scrtext_l }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Label heading: { ls_data_element-reptext }|.
+
+    IF ls_data_element-domname IS NOT INITIAL.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Domain Name: { ls_data_element-domname }|.
+    ENDIF.
+
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Type: { ls_data_element-datatype }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Length: { ls_data_element-leng ALPHA = OUT }|.
+
+    IF ls_data_element-datatype = 'DEC' OR ls_data_element-datatype = 'QUAN' OR ls_data_element-datatype = 'CURR'.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Decimals: { ls_data_element-decimals ALPHA = OUT }|.
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD update.
 
+    DATA ls_data_element TYPE dd04v.
+
+    DATA l_state TYPE ddobjstate.
+
+    DATA l_rc TYPE i.
+
+    DATA(l_data_element) = i_data_element_name.
+
+    l_data_element = condense( to_upper( l_data_element ) ).
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    SELECT as4local, as4vers
+      FROM dd04l
+      INTO TABLE @DATA(lt_dd01l)
+      WHERE rollname = @l_data_element.
+
+    IF sy-subrc <> 0.
+      r_response = |Data Element { l_data_element } doesn't exist.|.
+      RETURN.
+    ENDIF.
+
+    READ TABLE lt_dd01l INTO DATA(ls_dd01l)
+      WITH KEY as4vers = 'A'.
+
+    IF me->is_active( l_data_element ) = abap_true.
+      l_state = 'A'.
+    ENDIF.
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_data_element
+      INTO @DATA(ls_tadir).
+
+    IF i_data_type IS NOT INITIAL.
+
+      NEW ycl_aai_fc_ddic_tools_util( )->determine_data_type(
+        EXPORTING
+          i_data_type = i_data_type
+        IMPORTING
+          e_data_type = DATA(l_data_type)
+          e_error     = DATA(l_error)
+      ).
+
+      IF l_data_type IS INITIAL.
+
+        r_response = l_error.
+
+        RETURN.
+
+      ENDIF.
+
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_DTEL_GET'
+      EXPORTING
+        name          = l_data_element                 " Name of the Data Element to be Read
+        state         = l_state                        " Read Status of the Data Element
+        langu         = ls_tadir-masterlang            " Language in which Texts are Read
+      IMPORTING
+        gotstate      = l_state                        " Status in which Reading took Place
+        dd04v_wa      = ls_data_element                " Header of the Data Element
+      EXCEPTIONS
+        illegal_input = 1                              " Value not Allowed for Parameter
+        OTHERS        = 2.
+
+    IF sy-subrc <> 0.
+      r_response = |Error while reading data element { l_data_element }.|.
+      RETURN.
+    ENDIF.
+
+    ls_data_element-rollname = l_data_element.
+
+    ls_data_element-domname = condense( to_upper( i_domain_name ) ).
+
+    IF i_short_description IS NOT INITIAL.
+      ls_data_element-ddtext = i_short_description.
+    ENDIF.
+
+    IF i_label_heading IS NOT INITIAL.
+      ls_data_element-reptext = i_label_heading.
+    ENDIF.
+
+    IF i_label_short IS NOT INITIAL.
+      ls_data_element-scrtext_s = i_label_short.
+    ENDIF.
+
+    IF i_label_medium IS NOT INITIAL.
+      ls_data_element-scrtext_m = i_label_medium.
+    ENDIF.
+
+    IF i_label_long IS NOT INITIAL.
+      ls_data_element-scrtext_l = i_label_long.
+    ENDIF.
+
+    ls_data_element-datatype = l_data_type.
+    ls_data_element-leng = i_length.
+    ls_data_element-outputlen = i_length.
+
+    IF i_short_description IS NOT INITIAL.
+      ls_data_element-decimals = i_decimals.
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_DTEL_PUT'
+      EXPORTING
+        name              = l_data_element   " Name of the Data Element to be Written
+        dd04v_wa          = ls_data_element  " Sources of the Data Element
+      EXCEPTIONS
+        dtel_not_found    = 1                " No Sources for the Data Element
+        name_inconsistent = 2                " Name in Sources Inconsistent with NAME
+        dtel_inconsistent = 3                " Inconsistent Sources
+        put_failure       = 4                " Write Error (ROLLBACK Recommended)
+        put_refused       = 5                " Write not Allowed
+        OTHERS            = 6.
+
+    IF sy-subrc <> 0.
+
+      r_response = |An error occurred while creating the data element { l_data_element }.|.
+
+      RETURN.
+
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_DTEL_ACTIVATE'
+      EXPORTING
+        name        = l_data_element    " Name of the Data Element to be Activated
+*       auth_chk    = 'X'              " 'X': Perform Author. Check for DB Operations
+*       prid        = -1               " ID for Log Writer
+      IMPORTING
+        rc          = l_rc        " Result of Activation
+      EXCEPTIONS
+        not_found   = 1                " Data Element not Found
+        put_failure = 2                " Data Element could not be Written
+        OTHERS      = 3.
+
+    IF sy-subrc <> 0 OR l_rc IS NOT INITIAL.
+
+      r_response = |An error occurred while activating the data element { l_data_element }.{ cl_abap_char_utilities=>newline }|.
+
+      DATA(l_inactive) = abap_true.
+
+    ENDIF.
+
+    COMMIT WORK.
+
+    lo_cts_api->insert_object(
+      EXPORTING
+        i_s_object = VALUE #( trkorr = l_transport_request
+                              object = mc_object
+                              obj_name = l_data_element )
+        i_object_class = 'DICT'
+        i_package = ls_tadir-devclass
+        i_language = sy-langu
+      IMPORTING
+        e_inserted = DATA(l_inserted)
+    ).
+
+    IF l_inserted = abap_false.
+
+      r_response = |{ r_response }Data element { l_data_element } updated but it was not possible to add it to the transport request { l_transport_request }.|.
+
+      RETURN.
+
+    ENDIF.
+
+    IF l_inactive = abap_false.
+      r_response = |{ r_response }Data element { l_data_element } updated successfully.|.
+    ELSE.
+      r_response = |{ r_response }Data element { l_data_element } updated but it was not activated.|.
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD delete.
-
+    "TODO
   ENDMETHOD.
 
   METHOD get_translation.
@@ -291,11 +580,62 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD exists.
+
+    SELECT SINGLE @abap_true
+      FROM dd04l
+      INTO @r_exists
+      WHERE rollname = @i_data_element_name.
+
+  ENDMETHOD.
+
+  METHOD is_active.
+
+    SELECT SINGLE @abap_true
+      FROM dd04l
+      INTO @r_active
+      WHERE rollname = @i_data_element_name
+        AND as4local = 'A'.
+
+  ENDMETHOD.
+
+  METHOD is_locked.
+
+    DATA: lt_lock_entries TYPE STANDARD TABLE OF seqg3.
+
+    DATA: l_argument TYPE seqg3-garg.
+
+    r_locked = abap_false.
+
+    l_argument = |{ mc_object }{ i_data_element_name }|.
+
+    CALL FUNCTION 'ENQUEUE_READ'
+      EXPORTING
+        guname                = '*'
+        garg                  = l_argument
+      TABLES
+        enq                   = lt_lock_entries
+      EXCEPTIONS
+        communication_failure = 0
+        system_failure        = 0
+        OTHERS                = 0.
+
+    READ TABLE lt_lock_entries
+      TRANSPORTING NO FIELDS
+      WITH KEY gobj = 'ESDICT'.
+
+    IF sy-subrc = 0.
+      r_locked = abap_true.
+    ENDIF.
+
+  ENDMETHOD.
+
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
 
-    DATA(l_create) = abap_true.
+    DATA(l_create) = abap_false.
+    DATA(l_read) = abap_true.
 
     CASE abap_true.
 
@@ -318,6 +658,10 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
           RECEIVING
             r_response          = l_response
         ).
+
+      WHEN l_read.
+
+        l_response = me->read( i_data_element_name = 'ZDE_AI_USER_QUESTION' ).
 
     ENDCASE.
 
