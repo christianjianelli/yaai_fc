@@ -574,6 +574,9 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
   METHOD search.
 
+    DATA: l_domain_name       TYPE string,
+          l_short_description TYPE string.
+
     CLEAR r_response.
 
     DATA(l_package) = i_package.
@@ -591,11 +594,15 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    l_domain_name = |*{ i_domain_name }*|.
+
+    l_short_description = |*{ i_short_description }*|.
+
     LOOP AT lt_tadir ASSIGNING FIELD-SYMBOL(<ls_tadir>).
 
       IF i_domain_name IS NOT INITIAL.
 
-        IF NOT <ls_tadir>-obj_name CP i_domain_name.
+        IF NOT <ls_tadir>-obj_name CP l_domain_name.
           CONTINUE.
         ENDIF.
 
@@ -609,7 +616,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
       IF i_short_description IS NOT INITIAL.
 
-        IF NOT ls_dd01v-ddtext CP i_short_description.
+        IF NOT ls_dd01v-ddtext CP l_short_description.
           CONTINUE.
         ENDIF.
 
@@ -688,8 +695,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     DATA(l_create) = abap_false.
     DATA(l_read) = abap_false.
-    DATA(l_update) = abap_true.
-    DATA(l_search) = abap_false.
+    DATA(l_update) = abap_false.
+    DATA(l_search) = abap_true.
 
     CASE abap_true.
 
@@ -729,7 +736,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
       WHEN l_search.
 
-        l_response = me->search( i_package = 'Z001' ).
+        l_response = me->search( i_package = 'YAAI' i_domain_name = '' i_short_description = 'RAG' ).
 
     ENDCASE.
 

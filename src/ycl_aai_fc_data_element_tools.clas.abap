@@ -31,6 +31,13 @@ CLASS ycl_aai_fc_data_element_tools DEFINITION
                 i_data_element_name TYPE yde_aai_fc_data_element
       RETURNING VALUE(r_response)   TYPE string.
 
+    METHODS search
+      IMPORTING
+                i_package           TYPE packname
+                i_data_element_name TYPE yde_aai_fc_data_element OPTIONAL
+                i_short_description TYPE as4text OPTIONAL
+      RETURNING VALUE(r_response)   TYPE string.
+
     METHODS update
       IMPORTING
                 i_data_element_name TYPE yde_aai_fc_data_element
@@ -354,6 +361,78 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD search.
+
+    DATA: l_data_element_name TYPE string,
+          l_short_description TYPE string.
+
+    CLEAR r_response.
+
+    DATA(l_package) = i_package.
+
+    l_package = condense( to_upper( l_package ) ).
+
+    SELECT pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND devclass = @l_package
+      INTO TABLE @DATA(lt_tadir).
+
+    IF sy-subrc <> 0.
+      RETURN.
+    ENDIF.
+
+    l_data_element_name = |*{ i_data_element_name }*|.
+
+    l_short_description = |*{ i_short_description }*|.
+
+    LOOP AT lt_tadir ASSIGNING FIELD-SYMBOL(<ls_tadir>).
+
+      IF i_data_element_name IS NOT INITIAL.
+
+        IF NOT <ls_tadir>-obj_name CP l_data_element_name.
+          CONTINUE.
+        ENDIF.
+
+      ENDIF.
+
+      SELECT SINGLE rollname, domname, ddlanguage, datatype, leng, decimals, ddtext
+        FROM dd04v
+        WHERE rollname = @<ls_tadir>-obj_name
+          AND ddlanguage = @<ls_tadir>-masterlang
+        INTO @DATA(ls_dd04v).
+
+      IF i_short_description IS NOT INITIAL.
+
+        IF NOT ls_dd04v-ddtext CP l_short_description.
+          CONTINUE.
+        ENDIF.
+
+      ENDIF.
+
+      IF r_response IS NOT INITIAL.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }|.
+      ENDIF.
+
+      r_response = |{ r_response }Data Element: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Description: { ls_dd04v-ddtext }{ cl_abap_char_utilities=>newline }|.
+
+      IF ls_dd04v-domname IS NOT INITIAL.
+        r_response = |{ r_response }Domain: { ls_dd04v-domname }{ cl_abap_char_utilities=>newline }|.
+      ENDIF.
+
+      r_response = |{ r_response }Type: { ls_dd04v-datatype }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Length: { ls_dd04v-leng ALPHA = OUT }|.
+
+      IF ls_dd04v-datatype = 'DEC' OR ls_dd04v-datatype = 'QUAN' OR ls_dd04v-datatype = 'CURR'.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Decimals: { ls_dd04v-decimals ALPHA = OUT }|.
+      ENDIF.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
   METHOD update.
 
     DATA ls_data_element TYPE dd04v.
@@ -635,7 +714,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_true.
+    DATA(l_read) = abap_false.
+    DATA(l_search) = abap_true.
 
     CASE abap_true.
 
@@ -662,6 +742,14 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       WHEN l_read.
 
         l_response = me->read( i_data_element_name = 'ZDE_AI_USER_QUESTION' ).
+
+      WHEN l_search.
+
+        l_response = me->search(
+                       i_package           = 'Z001'
+                       i_data_element_name = 'BUS'
+*                       i_short_description =
+                     ).
 
     ENDCASE.
 
