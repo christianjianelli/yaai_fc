@@ -63,6 +63,7 @@ CLASS ycl_aai_fc_domain_tools DEFINITION
                 i_domain_name       TYPE yde_aai_fc_domain
                 i_transport_request TYPE yde_aai_fc_transport_request
                 i_language          TYPE spras
+                i_short_description TYPE as4text
                 i_t_fixed_values    TYPE ytt_aai_fc_domain_fixed_val
       RETURNING VALUE(r_response)   TYPE string.
 
@@ -724,6 +725,189 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
   METHOD set_translation.
 
+    DATA: lt_pcx_s1      TYPE STANDARD TABLE OF lxe_pcx_s1,
+          lt_pcx_s1_valu TYPE STANDARD TABLE OF lxe_pcx_s1,
+          lt_e071        TYPE trwbo_t_e071.
+
+    DATA: l_custmnr TYPE lxecustmnr VALUE '999999',
+          l_objtype TYPE trobjtype VALUE mc_object,
+          l_objname TYPE lxeobjname,
+          l_status  TYPE lxestatprc,
+          l_error   TYPE lxestring,
+          l_textkey TYPE lxe_pcx_s1-textkey.
+
+    CLEAR r_response.
+
+    DATA(l_domain_name) = i_domain_name.
+
+    l_domain_name = condense( to_upper( l_domain_name ) ).
+
+    l_objname = l_domain_name.
+
+    DATA(l_language) = i_language.
+
+    l_language = condense( to_upper( l_language ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_domain_name
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Domain { l_domain_name } not found.|.
+      RETURN.
+    ENDIF.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    SELECT language, r3_lang
+      FROM lxe_t002x
+      WHERE r3_lang = @ls_tadir-masterlang
+      AND is_r3_lang = 'X'
+      AND langshort <> ''
+      INTO @DATA(ls_source_language)
+      UP TO 1 ROWS.
+    ENDSELECT.
+
+    SELECT language, r3_lang, langshort
+      FROM lxe_t002x
+      WHERE r3_lang = @l_language
+      AND is_r3_lang = 'X'
+      AND langshort <> ''
+      INTO @DATA(ls_target_language)
+      UP TO 1 ROWS.
+    ENDSELECT.
+
+    SELECT domname, ddlanguage, as4local, valpos, as4vers, ddtext, domvalue_l
+      FROM dd07t
+      WHERE domname = @l_domain_name
+        AND ddlanguage = @ls_tadir-masterlang
+        AND as4local = 'A'
+        INTO TABLE @DATA(lt_dd07t).
+
+    CALL FUNCTION 'LXE_OBJ_TEXT_PAIR_READ'
+      EXPORTING
+        t_lang    = ls_target_language-language
+        s_lang    = ls_source_language-language
+        custmnr   = l_custmnr
+        objtype   = l_objtype
+        objname   = l_objname
+      TABLES
+        lt_pcx_s1 = lt_pcx_s1.
+
+    IF lt_pcx_s1 IS INITIAL.
+      r_response = |Error updating translations. Domain: { l_domain_name }. Target language: { l_language }.|.
+      RETURN.
+    ENDIF.
+
+    LOOP AT lt_pcx_s1 ASSIGNING FIELD-SYMBOL(<ls_pcx_s1>).
+      <ls_pcx_s1>-t_text = i_short_description.
+    ENDLOOP.
+
+    CALL FUNCTION 'LXE_OBJ_TEXT_PAIR_READ_VALU'
+      EXPORTING
+        t_r3_lang = l_language
+        s_r3_lang = ls_tadir-masterlang
+        objtype   = 'VALU'
+        objname   = l_objname
+        read_only = ' '
+      IMPORTING
+        pstatus   = l_status
+      TABLES
+        lt_pcx_s1 = lt_pcx_s1_valu.
+
+    LOOP AT i_t_fixed_values ASSIGNING FIELD-SYMBOL(<ls_fixed_values>).
+
+      READ TABLE lt_dd07t ASSIGNING FIELD-SYMBOL(<ls_dd07t>)
+        WITH KEY domvalue_l = <ls_fixed_values>-value.
+
+      IF sy-subrc = 0.
+
+        l_textkey = 'DDTEXT'.
+        l_textkey+10 = '0' && <ls_dd07t>-valpos.
+
+        READ TABLE lt_pcx_s1_valu ASSIGNING FIELD-SYMBOL(<ls_pcx_s1_valu>)
+          WITH KEY textkey = l_textkey.
+
+        IF sy-subrc = 0.
+
+          <ls_pcx_s1_valu>-t_text = <ls_fixed_values>-description.
+
+        ENDIF.
+
+      ENDIF.
+
+    ENDLOOP.
+
+    CALL FUNCTION 'LXE_OBJ_TEXT_PAIR_WRITE'
+      EXPORTING
+        s_lang    = ls_source_language-language
+        t_lang    = ls_target_language-language
+        custmnr   = l_custmnr
+        objtype   = l_objtype
+        objname   = l_objname
+      IMPORTING
+        pstatus   = l_status
+        err_msg   = l_error
+      TABLES
+        lt_pcx_s1 = lt_pcx_s1.
+
+    IF l_status <> 'S'.
+      r_response = |Error updating translations. Domain: { l_domain_name }. Target language: { l_language }.|.
+      RETURN.
+    ENDIF.
+
+    CLEAR: l_status,
+           l_error.
+
+    CALL FUNCTION 'LXE_OBJ_TEXT_WRITE_VALU'
+      EXPORTING
+        r3_lang   = l_language
+        objtype   = 'VALU'
+        objname   = l_objname
+      IMPORTING
+        pstatus   = l_status
+      TABLES
+        lt_pcx_s1 = lt_pcx_s1_valu.
+
+    IF l_status <> 'S'.
+      r_response = |Error updating translations. Domain: { l_domain_name }. Target language: { l_language }.|.
+      RETURN.
+    ENDIF.
+
+    lt_e071 = VALUE #( ( trkorr = l_transport_request
+                         pgmid = 'LANG'
+                         object = 'DOMD'
+                         obj_name = l_domain_name
+                         lang = l_language ) ).
+
+    DATA(l_success) = NEW ycl_aai_fc_cts_api( )->add_object(
+      EXPORTING
+        i_transport_request = l_transport_request
+      CHANGING
+        ch_t_e071           = lt_e071
+    ).
+
+    IF l_success = abap_true.
+      r_response = |Translations updated successfully. Domain: { l_domain_name }. Target language: { l_language }.|.
+    ELSE.
+      r_response = |Translations updated successfully but they were not added to the transport request { l_transport_request }. Domain: { l_domain_name }. Target language: { l_language }.|.
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD exists.
@@ -784,7 +968,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     DATA(l_read) = abap_false.
     DATA(l_update) = abap_false.
     DATA(l_search) = abap_false.
-    DATA(l_get_translation) = abap_true.
+    DATA(l_get_translation) = abap_false.
+    DATA(l_set_translation) = abap_true.
 
 
     CASE abap_true.
@@ -830,6 +1015,19 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       WHEN l_get_translation.
 
         l_response = me->get_translation( i_domain_name = 'ZDOTESTE' i_language    = 'P' ).
+
+      WHEN l_set_translation.
+
+        l_response = me->set_translation(
+                       i_domain_name       = 'ZDO_STAT_TEST_TRANSLATION'
+                       i_transport_request = 'NPLK900133'
+                       i_language          = 'P'
+                       i_short_description = 'Status'
+                       i_t_fixed_values    = VALUE #( ( value = 'A' description = 'Em andamento' )
+                                                      ( value = 'B' description = 'Bloqueado' )
+                                                      ( value = 'F' description = 'Finalizado' )
+                                                      ( value = 'P' description = 'Pendente' )
+                                                      ( value = 'D' description = 'Aguardando' ) ) ).
 
     ENDCASE.
 

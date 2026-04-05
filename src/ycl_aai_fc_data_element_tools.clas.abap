@@ -787,16 +787,18 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
                          obj_name = l_data_element
                          lang = l_language ) ).
 
-    NEW ycl_aai_fc_cts_api( )->add_object(
+    DATA(l_success) = NEW ycl_aai_fc_cts_api( )->add_object(
       EXPORTING
         i_transport_request = l_transport_request
       CHANGING
         ch_t_e071           = lt_e071
-      RECEIVING
-        r_success           = DATA(l_success)
     ).
 
-    r_response = |Translations updated successfully. Data Element: { l_data_element }. Target language: { l_language }.|.
+    IF l_success = abap_true.
+      r_response = |Translations updated successfully. Data Element: { l_data_element }. Target language: { l_language }.|.
+    ELSE.
+      r_response = |Translations updated successfully but they were not added to the transport request { l_transport_request }. Data Element: { l_data_element }. Target language: { l_language }.|.
+    ENDIF.
 
   ENDMETHOD.
 
