@@ -1,0 +1,14 @@
+CLASS ycl_aai_ddic_table_type_tools DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS ycl_aai_ddic_table_type_tools IMPLEMENTATION.
+ENDCLASS.

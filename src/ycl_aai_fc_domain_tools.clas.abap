@@ -58,6 +58,20 @@ CLASS ycl_aai_fc_domain_tools DEFINITION
                 i_domain_name     TYPE yde_aai_fc_domain
       RETURNING VALUE(r_response) TYPE string.
 
+    METHODS set_translation
+      IMPORTING
+                i_domain_name       TYPE yde_aai_fc_domain
+                i_transport_request TYPE yde_aai_fc_transport_request
+                i_language          TYPE spras
+                i_t_fixed_values    TYPE ytt_aai_fc_domain_fixed_val
+      RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS get_translation
+      IMPORTING
+                i_domain_name     TYPE yde_aai_fc_domain
+                i_language        TYPE spras
+      RETURNING VALUE(r_response) TYPE string.
+
     METHODS exists
       IMPORTING
                 i_domain_name   TYPE yde_aai_fc_domain
@@ -639,6 +653,79 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD get_translation.
+
+    DATA lt_fixed_values TYPE STANDARD TABLE OF dd07v.
+
+    DATA ls_domain TYPE dd01v.
+
+    DATA l_state TYPE ddobjstate.
+
+    DATA(l_domain_name) = i_domain_name.
+
+    l_domain_name = condense( to_upper( l_domain_name ) ).
+
+    SELECT as4local, as4vers
+      FROM dd01l
+      INTO TABLE @DATA(lt_dd01l)
+      WHERE domname = @l_domain_name.
+
+    IF sy-subrc <> 0.
+      r_response = |Domain { l_domain_name } doesn't exist.|.
+      RETURN.
+    ENDIF.
+
+    READ TABLE lt_dd01l INTO DATA(ls_dd01l)
+      WITH KEY as4vers = 'A'.
+
+    IF me->is_active( l_domain_name ) = abap_true.
+      l_state = 'A'.
+    ENDIF.
+
+    DATA(l_language) = i_language.
+
+    l_language = condense( to_upper( l_language ) ).
+
+    CALL FUNCTION 'DDIF_DOMA_GET'
+      EXPORTING
+        name          = l_domain_name           " Name of the Domain to be Read
+        state         = l_state                 " Read Status of the Domain
+        langu         = l_language              " Language in which Texts are Read
+      IMPORTING
+        gotstate      = l_state                 " Status in which Reading took Place
+        dd01v_wa      = ls_domain               " Header of the Domain
+      TABLES
+        dd07v_tab     = lt_fixed_values         " Fixed Domain Values
+      EXCEPTIONS
+        illegal_input = 1                       " Value not Allowed for Parameter
+        OTHERS        = 2.
+
+    IF sy-subrc <> 0.
+      r_response = |Error while reading domain { l_domain_name }.|.
+      RETURN.
+    ENDIF.
+
+    SELECT SINGLE sptxt
+      FROM t002t
+      WHERE spras = @sy-langu
+        AND sprsl = @l_language
+      INTO @DATA(l_language_description).
+
+    r_response = |Domain: { l_domain_name }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Language: { l_language_description }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Short Description: { ls_domain-ddtext }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Fixed Values:|.
+
+    LOOP AT lt_fixed_values ASSIGNING FIELD-SYMBOL(<ls_fixed_values>).
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Value:{ <ls_fixed_values>-domvalue_l } Text:{ <ls_fixed_values>-ddtext }|.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD set_translation.
+
+  ENDMETHOD.
+
   METHOD exists.
 
     SELECT SINGLE @abap_true
@@ -696,7 +783,9 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     DATA(l_create) = abap_false.
     DATA(l_read) = abap_false.
     DATA(l_update) = abap_false.
-    DATA(l_search) = abap_true.
+    DATA(l_search) = abap_false.
+    DATA(l_get_translation) = abap_true.
+
 
     CASE abap_true.
 
@@ -737,6 +826,10 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       WHEN l_search.
 
         l_response = me->search( i_package = 'YAAI' i_domain_name = '' i_short_description = 'RAG' ).
+
+      WHEN l_get_translation.
+
+        l_response = me->get_translation( i_domain_name = 'ZDOTESTE' i_language    = 'P' ).
 
     ENDCASE.
 

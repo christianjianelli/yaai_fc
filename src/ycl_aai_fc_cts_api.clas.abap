@@ -130,6 +130,7 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
     SELECT SINGLE @abap_true
       FROM e070
       WHERE trkorr = @i_order
+        AND trstatus = 'D'        "Modifiable
         AND as4user = @sy-uname
       INTO @r_is_valid.
 

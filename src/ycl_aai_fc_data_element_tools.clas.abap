@@ -306,7 +306,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       WHERE rollname = @l_data_element.
 
     IF sy-subrc <> 0.
-      r_response = |Data Element { l_data_element } doesn't exist.|.
+      r_response = |Data Element { l_data_element } not found.|.
       RETURN.
     ENDIF.
 
@@ -465,7 +465,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       WHERE rollname = @l_data_element.
 
     IF sy-subrc <> 0.
-      r_response = |Data Element { l_data_element } doesn't exist.|.
+      r_response = |Data Element { l_data_element } not found.|.
       RETURN.
     ENDIF.
 
@@ -628,9 +628,175 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
   METHOD get_translation.
 
+    DATA lt_rng_state TYPE RANGE OF ddobjstate.
+
+    CLEAR r_response.
+
+    DATA(l_data_element) = i_data_element_name.
+
+    l_data_element = condense( to_upper( l_data_element ) ).
+
+    DATA(l_language) = i_language.
+
+    l_language = condense( to_upper( l_language ) ).
+
+    SELECT as4local, as4vers
+      FROM dd04l
+      WHERE rollname = @l_data_element
+      INTO TABLE @DATA(lt_dd01l).
+
+    IF sy-subrc <> 0.
+      r_response = |Data Element { l_data_element } not found.|.
+      RETURN.
+    ENDIF.
+
+    READ TABLE lt_dd01l INTO DATA(ls_dd01l)
+      WITH KEY as4vers = 'A'.
+
+    IF me->is_active( l_data_element ) = abap_true.
+      lt_rng_state = VALUE #( ( sign = 'I' option = 'EQ' low = 'A' ) ) .
+    ENDIF.
+
+    SELECT rollname, ddlanguage, as4local, as4vers, ddtext, reptext, scrtext_s, scrtext_m, scrtext_l
+      FROM dd04t
+      WHERE rollname = @l_data_element
+        AND ddlanguage = @l_language
+        AND as4local IN @lt_rng_state
+      INTO @DATA(ls_dd04t)
+      UP TO 1 ROWS.
+    ENDSELECT.
+
+    IF sy-subrc = 0.
+
+      SELECT SINGLE sptxt
+        FROM t002t
+        WHERE spras = @sy-langu
+          AND sprsl = @l_language
+        INTO @DATA(l_language_description).
+
+      r_response = |Data Element: { l_data_element }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Language: { l_language_description }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Short Description: { ls_dd04t-ddtext }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Label Short: { ls_dd04t-scrtext_s }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Label Medium: { ls_dd04t-scrtext_m }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Label Long: { ls_dd04t-scrtext_l }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Label Heading: { ls_dd04t-reptext }{ cl_abap_char_utilities=>newline }|.
+
+    ELSE.
+
+      r_response = |No translation to language `{ l_language }` found for data element { l_data_element }.|.
+
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD set_translation.
+
+    DATA: lt_pcx_s1 TYPE STANDARD TABLE OF lxe_pcx_s1,
+          lt_e071   TYPE trwbo_t_e071.
+
+    DATA: l_custmnr TYPE lxecustmnr VALUE '999999',
+          l_objtype TYPE trobjtype VALUE mc_object,
+          l_objname TYPE lxeobjname,
+          l_status  TYPE lxestatprc,
+          l_error   TYPE lxestring.
+
+    CLEAR r_response.
+
+    DATA(l_data_element) = i_data_element_name.
+
+    l_data_element = condense( to_upper( l_data_element ) ).
+
+    l_objname = l_data_element.
+
+    DATA(l_language) = i_language.
+
+    l_language = condense( to_upper( l_language ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_data_element
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Data Element { l_data_element } not found.|.
+      RETURN.
+    ENDIF.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    SELECT language, r3_lang
+      FROM lxe_t002x
+      WHERE r3_lang = @ls_tadir-masterlang
+      AND is_r3_lang = 'X'
+      AND langshort <> ''
+      INTO @DATA(ls_source_language)
+      UP TO 1 ROWS.
+    ENDSELECT.
+
+    SELECT language, r3_lang, langshort
+      FROM lxe_t002x
+      WHERE r3_lang = @l_language
+      AND is_r3_lang = 'X'
+      AND langshort <> ''
+      INTO @DATA(ls_target_language)
+      UP TO 1 ROWS.
+    ENDSELECT.
+
+    lt_pcx_s1 = VALUE #( ( textkey = 'DDTEXT' t_text = i_short_description )
+                         ( textkey = 'SCRTEXT_S' t_text = i_label_short )
+                         ( textkey = 'SCRTEXT_M' t_text = i_label_medium )
+                         ( textkey = 'SCRTEXT_L' t_text = i_label_long )
+                         ( textkey = 'REPTEXT' t_text = i_short_description ) ).
+
+    CALL FUNCTION 'LXE_OBJ_TEXT_PAIR_WRITE'
+      EXPORTING
+        s_lang    = ls_source_language-language
+        t_lang    = ls_target_language-language
+        custmnr   = l_custmnr
+        objtype   = l_objtype
+        objname   = l_objname
+      IMPORTING
+        pstatus   = l_status
+        err_msg   = l_error
+      TABLES
+        lt_pcx_s1 = lt_pcx_s1.
+
+    IF l_status <> 'S'.
+      r_response = |Error updating translations. Data Element: { l_data_element }. Target language: { l_language }.|.
+      RETURN.
+    ENDIF.
+
+    lt_e071 = VALUE #( ( trkorr = l_transport_request
+                         pgmid = 'LANG'
+                         object = 'DTED'
+                         obj_name = l_data_element
+                         lang = l_language ) ).
+
+    NEW ycl_aai_fc_cts_api( )->add_object(
+      EXPORTING
+        i_transport_request = l_transport_request
+      CHANGING
+        ch_t_e071           = lt_e071
+      RECEIVING
+        r_success           = DATA(l_success)
+    ).
+
+    r_response = |Translations updated successfully. Data Element: { l_data_element }. Target language: { l_language }.|.
 
   ENDMETHOD.
 
@@ -715,7 +881,9 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     DATA(l_create) = abap_false.
     DATA(l_read) = abap_false.
-    DATA(l_search) = abap_true.
+    DATA(l_search) = abap_false.
+    DATA(l_get_translation) = abap_false.
+    DATA(l_set_translation) = abap_true.
 
     CASE abap_true.
 
@@ -733,7 +901,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
             i_label_medium      = 'DDIF_DTEL_PUT'
             i_label_long        = 'Test DTEL create via DDIF_DTEL_PUT'
             i_label_heading     = 'Test DTEL create via DDIF_DTEL_PUT'
-            i_transport_request = 'NPLK900133'
+            i_transport_request = 'NPLK900134'
             i_package           = 'Z001'
           RECEIVING
             r_response          = l_response
@@ -750,6 +918,26 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
                        i_data_element_name = 'BUS'
 *                       i_short_description =
                      ).
+
+      WHEN l_get_translation.
+
+        l_response = me->get_translation(
+          EXPORTING
+            i_data_element_name = 'ZDE_PRICE'
+            i_language          = 'D'
+        ).
+
+      WHEN l_set_translation.
+
+        l_response = me->set_translation(
+                       i_data_element_name = 'ZDE_TEST_DDIF_DTEL_PUT3'
+                       i_transport_request = 'NPLK900134'
+                       i_language          = 'S'
+                       i_short_description = 'Precio del artículo'
+                       i_label_short       = 'Precio art'
+                       i_label_medium      = 'Precio del artículo'
+                       i_label_long        = 'Precio del artículo'
+                       i_label_heading     = 'Precio del artículo' ).
 
     ENDCASE.
 
