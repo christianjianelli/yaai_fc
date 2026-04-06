@@ -117,16 +117,20 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
     ls_table-tabclass = mc_tabclass.
     ls_table-ddtext = i_short_description.
     ls_table-ddlanguage = sy-langu.
+
+    " Delivery Class
     ls_table-contflag = COND #( WHEN i_delivery_class IS NOT INITIAL
                                 THEN condense( to_upper( i_delivery_class ) )
                                 ELSE 'A' ).
 
     ls_tech_settings-tabname = l_table_name.
 
+    " Size Category
     ls_tech_settings-tabkat = COND #( WHEN i_size_category IS NOT INITIAL
                                       THEN i_size_category
                                       ELSE '0' ).
 
+    " Data Class
     ls_tech_settings-tabart = COND #( WHEN i_data_class IS NOT INITIAL
                                       THEN to_upper( i_data_class )
                                       ELSE 'APPL1' ).
@@ -191,9 +195,7 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-
-      r_response = |An error occurred while creating the structure { l_table_name }.|.
-
+      r_response = |An error occurred while creating the table { l_table_name }.|.
       RETURN.
     ENDIF.
 
@@ -234,11 +236,8 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
         OTHERS                         = 25.
 
     IF sy-subrc <> 0.
-
-      r_response = |An error occurred while creating the TADIR entry for the newly created structure { l_table_name }.|.
-
+      r_response = |An error occurred while creating the TADIR entry for the newly created table { l_table_name }.|.
       RETURN.
-
     ENDIF.
 
     CALL FUNCTION 'DDIF_TABL_ACTIVATE'
@@ -252,11 +251,8 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-
-      r_response = |An error occurred while activating the structure { l_table_name }. { cl_abap_char_utilities=>newline }|.
-
+      r_response = |An error occurred while activating the table { l_table_name }. { cl_abap_char_utilities=>newline }|.
       DATA(l_inactive) = abap_true.
-
     ENDIF.
 
     COMMIT WORK.
@@ -275,25 +271,26 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
 
     IF l_inserted = abap_false.
 
-      r_response = |{ r_response }Structure { l_table_name } created but it was not possible to add it to the transport request { l_transport_request }.|.
+      r_response = |{ r_response }Table { l_table_name } created but it was not possible to add it to the transport request { l_transport_request }.|.
 
       RETURN.
 
     ENDIF.
 
     IF l_inactive = abap_false.
-      r_response = |Structure { l_table_name } created successfully.|.
+      r_response = |Table { l_table_name } created successfully.|.
     ELSE.
-      r_response = |{ r_response }Structure { l_table_name } created but not activated.|.
+      r_response = |{ r_response }Table { l_table_name } created but not activated.|.
     ENDIF.
 
   ENDMETHOD.
 
   METHOD read.
 
-    DATA lt_structure_fields TYPE STANDARD TABLE OF dd03p.
+    DATA lt_table_fields TYPE STANDARD TABLE OF dd03p.
 
-    DATA ls_structure TYPE dd02v.
+    DATA: ls_table         TYPE dd02v,
+          ls_tech_settings TYPE dd09v.
 
     DATA l_state TYPE ddobjstate.
 
@@ -304,11 +301,12 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
     SELECT tabname, as4local, as4vers
       FROM dd02l
       WHERE tabname = @l_table_name
+        AND tabclass = @mc_tabclass
       ORDER BY PRIMARY KEY
       INTO TABLE @DATA(lt_dd02l).
 
     IF sy-subrc <> 0.
-      r_response = |Structure { l_table_name } not found.|.
+      r_response = |Table { l_table_name } not found.|.
       RETURN.
     ENDIF.
 
@@ -335,44 +333,48 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
         langu         = ls_tadir-masterlang
       IMPORTING
         gotstate      = l_state
-        dd02v_wa      = ls_structure
+        dd02v_wa      = ls_table
+        dd09l_wa      = ls_tech_settings
       TABLES
-        dd03p_tab     = lt_structure_fields
+        dd03p_tab     = lt_table_fields
       EXCEPTIONS
         illegal_input = 1
         OTHERS        = 2.
 
-    IF sy-subrc <> 0 OR ls_structure IS INITIAL.
-      r_response = |Structure { l_table_name } not found.|.
+    IF sy-subrc <> 0 OR ls_table IS INITIAL.
+      r_response = |Table { l_table_name } not found.|.
       RETURN.
     ENDIF.
 
-    r_response = |Structure: { l_table_name }|.
-    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_structure-ddtext }|.
+    r_response = |Table: { l_table_name }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_table-ddtext }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Package: { ls_tadir-devclass }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Delivery Class: { ls_table-contflag }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Data Class: { ls_tech_settings-tabart }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Size Category: { ls_tech_settings-tabkat }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Fields:|.
 
-    LOOP AT lt_structure_fields ASSIGNING FIELD-SYMBOL(<ls_structure_field>).
+    LOOP AT lt_table_fields ASSIGNING FIELD-SYMBOL(<ls_table_field>).
 
       r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
 
-      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Field: { <ls_structure_field>-fieldname }|.
-      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Description: { <ls_structure_field>-ddtext }|.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Field: { <ls_table_field>-fieldname }|.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Description: { <ls_table_field>-ddtext }|.
 
-      IF <ls_structure_field>-rollname IS NOT INITIAL.
-        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Data Element: { <ls_structure_field>-rollname }|.
+      IF <ls_table_field>-rollname IS NOT INITIAL.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Data Element: { <ls_table_field>-rollname }|.
       ENDIF.
 
-      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Type: { <ls_structure_field>-datatype }|.
-      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Length: { <ls_structure_field>-leng ALPHA = OUT }|.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Type: { <ls_table_field>-datatype }|.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Length: { <ls_table_field>-leng ALPHA = OUT }|.
 
-      IF <ls_structure_field>-datatype = 'DEC' OR <ls_structure_field>-datatype = 'QUAN' OR <ls_structure_field>-datatype = 'CURR'.
-        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Decimals: { <ls_structure_field>-decimals ALPHA = OUT }|.
+      IF <ls_table_field>-datatype = 'DEC' OR <ls_table_field>-datatype = 'QUAN' OR <ls_table_field>-datatype = 'CURR'.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Decimals: { <ls_table_field>-decimals ALPHA = OUT }|.
       ENDIF.
 
-      IF <ls_structure_field>-reffield IS NOT INITIAL.
-        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Reference Table: { <ls_structure_field>-reftable }|.
-        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Reference Field: { <ls_structure_field>-reffield }|.
+      IF <ls_table_field>-reffield IS NOT INITIAL.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Reference Table: { <ls_table_field>-reftable }|.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Reference Field: { <ls_table_field>-reffield }|.
       ENDIF.
 
     ENDLOOP.
@@ -381,7 +383,7 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
 
   METHOD search.
 
-    DATA: l_structure         TYPE string,
+    DATA: l_table             TYPE string,
           l_short_description TYPE string.
 
     CLEAR r_response.
@@ -401,15 +403,15 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    l_structure = |*{ i_table_name }*|.
+    l_table = |*{ i_table_name }*|.
 
     l_short_description = |*{ i_short_description }*|.
 
     LOOP AT lt_tadir ASSIGNING FIELD-SYMBOL(<ls_tadir>).
 
-      IF l_structure IS NOT INITIAL.
+      IF l_table IS NOT INITIAL.
 
-        IF NOT <ls_tadir>-obj_name CP l_structure.
+        IF NOT <ls_tadir>-obj_name CP l_table.
           CONTINUE.
         ENDIF.
 
@@ -418,8 +420,13 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
       SELECT SINGLE tabname, ddlanguage, ddtext
         FROM dd02v
         WHERE tabname = @<ls_tadir>-obj_name
+          AND tabclass = @mc_tabclass
           AND ddlanguage = @<ls_tadir>-masterlang
         INTO @DATA(ls_dd01v).
+
+      IF sy-subrc <> 0.
+        CONTINUE.
+      ENDIF.
 
       IF i_short_description IS NOT INITIAL.
 
@@ -433,7 +440,7 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
         r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
       ENDIF.
 
-      r_response = |{ r_response }Structure: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Table: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
       r_response = |{ r_response }Description: { ls_dd01v-ddtext }{ cl_abap_char_utilities=>newline }|.
 
     ENDLOOP.
@@ -442,9 +449,10 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
 
   METHOD update.
 
-    DATA lt_structure_fields TYPE STANDARD TABLE OF dd03p.
+    DATA lt_table_fields TYPE STANDARD TABLE OF dd03p.
 
-    DATA ls_structure TYPE dd02v.
+    DATA: ls_table         TYPE dd02v,
+          ls_tech_settings TYPE dd09v.
 
     DATA: l_state TYPE ddobjstate VALUE 'A',
           l_rc    TYPE i.
@@ -454,12 +462,12 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
     l_table_name = condense( to_upper( l_table_name ) ).
 
     IF me->exists( l_table_name ) = abap_false.
-      r_response = |Structure { l_table_name } not found.|.
+      r_response = |Table { l_table_name } not found.|.
       RETURN.
     ENDIF.
 
     IF me->is_locked( l_table_name ) = abap_true.
-      r_response = |Structure { l_table_name } is locked.|.
+      r_response = |Table { l_table_name } is locked.|.
       RETURN.
     ENDIF.
 
@@ -480,15 +488,16 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
         state         = l_state
         langu         = ls_tadir-masterlang
       IMPORTING
-        dd02v_wa      = ls_structure
+        dd02v_wa      = ls_table
+        dd09l_wa      = ls_tech_settings
       TABLES
-        dd03p_tab     = lt_structure_fields
+        dd03p_tab     = lt_table_fields
       EXCEPTIONS
         illegal_input = 1
         OTHERS        = 2.
 
     IF sy-subrc <> 0.
-      r_response = |Structure { l_table_name } not found.|.
+      r_response = |Table { l_table_name } not found.|.
       RETURN.
     ENDIF.
 
@@ -504,12 +513,22 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
     ENDIF.
 
     IF i_short_description IS NOT INITIAL.
-      ls_structure-ddtext = i_short_description.
+      ls_table-ddtext = i_short_description.
+    ENDIF.
+
+    " Size Category
+    IF i_size_category IS NOT INITIAL.
+      ls_tech_settings-tabkat = i_size_category.
+    ENDIF.
+
+    " Data Class
+    IF i_size_category IS NOT INITIAL.
+      ls_tech_settings-tabart = i_data_class.
     ENDIF.
 
     IF i_t_components IS NOT INITIAL.
 
-      FREE lt_structure_fields.
+      FREE lt_table_fields.
 
       DATA(lo_aai_fc_ddic_tools) = NEW ycl_aai_fc_ddic_tools_util( ).
 
@@ -519,14 +538,19 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
 
       DATA(l_position) = sy-tabix.
 
-      APPEND INITIAL LINE TO lt_structure_fields ASSIGNING FIELD-SYMBOL(<ls_structure_field>).
+      APPEND INITIAL LINE TO lt_table_fields ASSIGNING FIELD-SYMBOL(<ls_table_field>).
 
-      <ls_structure_field>-tabname = l_table_name.
-      <ls_structure_field>-fieldname = <ls_component>-field_name.
-      <ls_structure_field>-position = l_position.
-      <ls_structure_field>-ddlanguage = sy-langu.
-      <ls_structure_field>-ddtext = <ls_component>-short_description.
-      <ls_structure_field>-rollname = <ls_component>-data_element.
+      <ls_table_field>-tabname = l_table_name.
+      <ls_table_field>-fieldname = <ls_component>-field_name.
+
+      IF <ls_component>-key_flag IS NOT INITIAL.
+        <ls_table_field>-keyflag = abap_true.
+      ENDIF.
+
+      <ls_table_field>-position = l_position.
+      <ls_table_field>-ddlanguage = sy-langu.
+      <ls_table_field>-ddtext = <ls_component>-short_description.
+      <ls_table_field>-rollname = <ls_component>-data_element.
 
       IF <ls_component>-data_type IS NOT INITIAL.
 
@@ -539,27 +563,28 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
         ).
 
         IF l_error IS INITIAL.
-          <ls_structure_field>-datatype = l_data_type.
+          <ls_table_field>-datatype = l_data_type.
         ENDIF.
 
       ENDIF.
 
-      <ls_structure_field>-leng = <ls_component>-length.
-      <ls_structure_field>-decimals = <ls_component>-decimals.
+      <ls_table_field>-leng = <ls_component>-length.
+      <ls_table_field>-decimals = <ls_component>-decimals.
 
       IF <ls_component>-ref_field IS NOT INITIAL.
-        <ls_structure_field>-reftable = l_table_name.
-        <ls_structure_field>-reffield = condense( to_upper( <ls_component>-ref_field ) ).
+        <ls_table_field>-reftable = l_table_name.
+        <ls_table_field>-reffield = condense( to_upper( <ls_component>-ref_field ) ).
       ENDIF.
 
     ENDLOOP.
 
     CALL FUNCTION 'DDIF_TABL_PUT'
       EXPORTING
-        name              = ls_structure-tabname
-        dd02v_wa          = ls_structure
+        name              = ls_table-tabname
+        dd02v_wa          = ls_table
+        dd09l_wa          = ls_tech_settings
       TABLES
-        dd03p_tab         = lt_structure_fields
+        dd03p_tab         = lt_table_fields
       EXCEPTIONS
         tabl_not_found    = 1
         name_inconsistent = 2
@@ -570,14 +595,14 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
 
     IF sy-subrc <> 0.
 
-      r_response = |An error occurred while updating the structure { l_table_name }.|.
+      r_response = |An error occurred while updating the table { l_table_name }.|.
 
       RETURN.
     ENDIF.
 
     CALL FUNCTION 'DDIF_TABL_ACTIVATE'
       EXPORTING
-        name        = ls_structure-tabname
+        name        = ls_table-tabname
       IMPORTING
         rc          = l_rc
       EXCEPTIONS
@@ -587,7 +612,7 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
 
     IF sy-subrc <> 0 OR l_rc > 4.
 
-      r_response = |An error occurred while activating the structure { l_table_name }. { cl_abap_char_utilities=>newline }|.
+      r_response = |An error occurred while activating the table { l_table_name }. { cl_abap_char_utilities=>newline }|.
 
       DATA(l_inactive) = abap_true.
 
@@ -609,16 +634,16 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
 
     IF l_inserted = abap_false.
 
-      r_response = |{ r_response }Structure { l_table_name } updated but it was not possible to add it to the transport request { l_transport_request }.|.
+      r_response = |{ r_response }Table { l_table_name } updated but it was not possible to add it to the transport request { l_transport_request }.|.
 
       RETURN.
 
     ENDIF.
 
     IF l_inactive = abap_false.
-      r_response = |Structure { l_table_name } updated successfully.|.
+      r_response = |Table { l_table_name } updated successfully.|.
     ELSE.
-      r_response = |{ r_response }Structure { l_table_name } updated but not activated.|.
+      r_response = |{ r_response }Table { l_table_name } updated but not activated.|.
     ENDIF.
 
   ENDMETHOD.
@@ -648,11 +673,11 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-      r_response = |An error occurred while activating the structure { l_table_name }.'|.
+      r_response = |An error occurred while activating the table { l_table_name }.'|.
       RETURN.
     ENDIF.
 
-    r_response = |Structure { l_table_name } activated successfully.|.
+    r_response = |Table { l_table_name } activated successfully.|.
 
   ENDMETHOD.
 
@@ -711,48 +736,48 @@ CLASS ycl_aai_ddic_db_table_tools IMPLEMENTATION.
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_false.
+    DATA(l_read) = abap_true.
     DATA(l_search) = abap_false.
-    DATA(l_update) = abap_true.
+    DATA(l_update) = abap_false.
 
 
     CASE abap_true.
 
       WHEN l_create.
 
-        l_response = me->create(
-                       i_table_name    = 'ZST_TEST_DDIF_TABL_PUT1'
-                       i_short_description = 'Test Structure Create tool'
-                       i_transport_request = 'NPLK900132'
-                       i_package           = 'Z001'
-                       i_t_components      = VALUE #( ( field_name = 'FIELD1' data_type = 'CHAR' length = '10' )
-                                                      ( field_name = 'FIELD2' data_type = 'STRING' )
-                                                      ( field_name = 'VAL' data_type = 'CURR' length = '13' decimals = '2' ref_field = 'CURRENCY' )
-                                                      ( field_name = 'CURRENCY' data_element = 'WAERS' ) )
-                     ).
+        l_response = me->create( i_table_name = 'ZTBTEST1'
+                                 i_short_description = 'Test Table Create tool 1'
+                                 i_transport_request = 'NPLK900133'
+                                 i_package = 'Z001'
+                                 i_t_components = VALUE #( ( field_name = 'MANDT' key_flag = 'X' data_element = 'MANDT' )
+                                                           ( field_name = 'FIELD1' key_flag = 'X' data_type = 'CHAR' length = '10' )
+                                                           ( field_name = 'FIELD2' data_type = 'STRING' )
+                                                           ( field_name = 'VAL' data_type = 'CURR' length = '13' decimals = '2' ref_field = 'CURRENCY' )
+                                                           ( field_name = 'CURRENCY' data_element = 'WAERS' ) ) ).
 
       WHEN l_read.
 
-        l_response = me->read( 'ZST_TEST_DDIF_TABL_PUT1' ).
+        l_response = me->read( 'ZTBTEST1' ).
 
       WHEN l_search.
 
         l_response = me->search(
-                       i_package           = 'YAAI_FC'
+                       i_package           = 'YAAI'
 *                       i_table_name    =
 *                       i_short_description =
                      ).
 
       WHEN l_update.
 
-        l_response = me->update(
-                       i_table_name    = 'ZST_TEST_DDIF_TABL_PUT1'
-                       i_short_description = 'Test Structure Create tool'
-                       i_transport_request = 'NPLK900132'
-                       i_t_components      = VALUE #( ( field_name = 'DOCID' data_type = 'CHAR' length = '10' )
-                                                      ( field_name = 'TOTAMT' data_type = 'CURR' length = '13' decimals = '2' ref_field = 'CURCY' )
-                                                      ( field_name = 'CURCY' data_element = 'WAERS' ) )
-                     ).
+        l_response = me->update( i_table_name = 'ZTBTEST1'
+                                 i_short_description = 'Test Table Update tool'
+                                 i_data_class = 'APPL0'
+                                 i_size_category = '1'
+                                 i_transport_request = 'NPLK900133'
+                                 i_t_components = VALUE #( ( field_name = 'MANDT' key_flag = 'X' data_element = 'MANDT' )
+                                                           ( field_name = 'FIELD1' key_flag = 'X' data_type = 'CHAR' length = '10' )
+                                                           ( field_name = 'TOTAMT' data_type = 'CURR' length = '13' decimals = '2' ref_field = 'CURCY' )
+                                                           ( field_name = 'CURCY' data_element = 'WAERS' ) ) ).
 
     ENDCASE.
 
