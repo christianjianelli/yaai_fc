@@ -173,16 +173,16 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     CALL FUNCTION 'DDIF_DOMA_PUT'
       EXPORTING
-        name              = l_domain_name    " Name of the Domain to be Written
-        dd01v_wa          = ls_domain        " Header of the Domain
+        name              = l_domain_name
+        dd01v_wa          = ls_domain
       TABLES
-        dd07v_tab         = lt_fixed_values  " Fixed Values
+        dd07v_tab         = lt_fixed_values
       EXCEPTIONS
-        doma_not_found    = 1                " Header of the Domain could not be Found
-        name_inconsistent = 2                " Name in Sources Inconsistent with NAME
-        doma_inconsistent = 3                " Inconsistent Sources
-        put_failure       = 4                " Write Error (ROLLBACK Recommended)
-        put_refused       = 5                " Write not Allowed
+        doma_not_found    = 1
+        name_inconsistent = 2
+        doma_inconsistent = 3
+        put_failure       = 4
+        put_refused       = 5
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
@@ -203,30 +203,30 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
         wi_tadir_devclass              = l_package
         wi_set_genflag                 = abap_false
       EXCEPTIONS
-        tadir_entry_not_existing       = 1                " Object directory entry does not exist
-        tadir_entry_ill_type           = 2                " Transferred TADIR key not compatible with E071
-        no_systemname                  = 3                " System name not found
-        no_systemtype                  = 4                " System type not defined
-        original_system_conflict       = 5                " Object already exists in another system
-        object_reserved_for_devclass   = 6                " Object reserved for name range
-        object_exists_global           = 7                " Object exists globally
-        object_exists_local            = 8                " Object exists locally
-        object_is_distributed          = 9                " Object is distributed
-        obj_specification_not_unique   = 10               " Object specification for import is not sufficient
-        no_authorization_to_delete     = 11               " No permission to delete
-        devclass_not_existing          = 12               " Package unknown
-        simultanious_set_remove_repair = 13               " Repair flag set/reset simultaneously
-        order_missing                  = 14               " Repair request was not transferred
-        no_modification_of_head_syst   = 15               " Modification of HEAD-SYST entry not allowed
-        pgmid_object_not_allowed       = 16               " PGMID entry not permitted
-        masterlanguage_not_specified   = 17               " Master language not specified
-        devclass_not_specified         = 18               " Package not specified
+        tadir_entry_not_existing       = 1
+        tadir_entry_ill_type           = 2
+        no_systemname                  = 3
+        no_systemtype                  = 4
+        original_system_conflict       = 5
+        object_reserved_for_devclass   = 6
+        object_exists_global           = 7
+        object_exists_local            = 8
+        object_is_distributed          = 9
+        obj_specification_not_unique   = 10
+        no_authorization_to_delete     = 11
+        devclass_not_existing          = 12
+        simultanious_set_remove_repair = 13
+        order_missing                  = 14
+        no_modification_of_head_syst   = 15
+        pgmid_object_not_allowed       = 16
+        masterlanguage_not_specified   = 17
+        devclass_not_specified         = 18
         specify_owner_unique           = 19
-        loc_priv_objs_no_repair        = 20               " No repair to local-private objects
-        gtadir_not_reached             = 21               " The GTADIR cannot be accessed
+        loc_priv_objs_no_repair        = 20
+        gtadir_not_reached             = 21
         object_locked_for_order        = 22
         change_of_class_not_allowed    = 23
-        no_change_from_sap_to_tmp      = 24               " Do not switch SAP objects to customer development class
+        no_change_from_sap_to_tmp      = 24
         OTHERS                         = 25.
 
     IF sy-subrc <> 0.
@@ -239,13 +239,15 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
       EXPORTING
-        name        = l_domain_name    " Name of the Data Element to be Activated
+        name        = l_domain_name
+      IMPORTING
+        rc          = l_rc
       EXCEPTIONS
-        not_found   = 1                " Data Element not Found
-        put_failure = 2                " Data Element could not be Written
+        not_found   = 1
+        put_failure = 2
         OTHERS      = 3.
 
-    IF sy-subrc <> 0.
+    IF sy-subrc <> 0 OR l_rc > 4.
 
       r_response = |An error occurred while activating the domain { l_domain_name }. { cl_abap_char_utilities=>newline }|.
 
@@ -278,7 +280,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     IF l_inactive = abap_false.
       r_response = |Domain { l_domain_name } created successfully.|.
     ELSE.
-      r_response = |{ r_response }Domain { l_domain_name } created.|.
+      r_response = |{ r_response }Domain { l_domain_name } created but not activated.|.
     ENDIF.
 
   ENDMETHOD.
@@ -321,16 +323,16 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     CALL FUNCTION 'DDIF_DOMA_GET'
       EXPORTING
-        name          = l_domain_name           " Name of the Domain to be Read
-        state         = l_state                 " Read Status of the Domain
-        langu         = ls_tadir-masterlang     " Language in which Texts are Read
+        name          = l_domain_name
+        state         = l_state
+        langu         = ls_tadir-masterlang
       IMPORTING
-        gotstate      = l_state                 " Status in which Reading took Place
-        dd01v_wa      = ls_domain               " Header of the Domain
+        gotstate      = l_state
+        dd01v_wa      = ls_domain
       TABLES
-        dd07v_tab     = lt_fixed_values         " Fixed Domain Values
+        dd07v_tab     = lt_fixed_values
       EXCEPTIONS
-        illegal_input = 1                       " Value not Allowed for Parameter
+        illegal_input = 1
         OTHERS        = 2.
 
     IF sy-subrc <> 0.
@@ -367,7 +369,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     DATA ls_domain TYPE dd01v.
 
-    DATA l_state TYPE ddobjstate VALUE 'A'.
+    DATA: l_state TYPE ddobjstate VALUE 'A',
+          l_rc    TYPE i.
 
     CLEAR r_response.
 
@@ -390,7 +393,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     l_domain_name = condense( to_upper( l_domain_name ) ).
 
     IF me->exists( l_domain_name ) = abap_false.
-      r_response = |Domain { l_domain_name } doesn't exist.|.
+      r_response = |Domain { l_domain_name } not found.|.
       RETURN.
     ENDIF.
 
@@ -401,7 +404,6 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     IF me->is_active( l_domain_name ) = abap_false.
       l_state = 'M'.
-      RETURN.
     ENDIF.
 
     SELECT SINGLE pgmid, object, obj_name, masterlang, devclass
@@ -413,16 +415,16 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     CALL FUNCTION 'DDIF_DOMA_GET'
       EXPORTING
-        name          = l_domain_name           " Name of the Domain to be Read
-        state         = l_state                 " Read Status of the Domain
-        langu         = ls_tadir-masterlang     " Language in which Texts are Read
+        name          = l_domain_name
+        state         = l_state
+        langu         = ls_tadir-masterlang
       IMPORTING
-        gotstate      = l_state                 " Status in which Reading took Place
-        dd01v_wa      = ls_domain               " Header of the Domain
+        gotstate      = l_state
+        dd01v_wa      = ls_domain
       TABLES
-        dd07v_tab     = lt_fixed_values         " Fixed Domain Values
+        dd07v_tab     = lt_fixed_values
       EXCEPTIONS
-        illegal_input = 1                       " Value not Allowed for Parameter
+        illegal_input = 1
         OTHERS        = 2.
 
     IF sy-subrc <> 0.
@@ -488,16 +490,16 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     CALL FUNCTION 'DDIF_DOMA_PUT'
       EXPORTING
-        name              = l_domain_name    " Name of the Domain to be Written
-        dd01v_wa          = ls_domain        " Header of the Domain
+        name              = l_domain_name
+        dd01v_wa          = ls_domain
       TABLES
-        dd07v_tab         = lt_fixed_values  " Fixed Values
+        dd07v_tab         = lt_fixed_values
       EXCEPTIONS
-        doma_not_found    = 1                " Header of the Domain could not be Found
-        name_inconsistent = 2                " Name in Sources Inconsistent with NAME
-        doma_inconsistent = 3                " Inconsistent Sources
-        put_failure       = 4                " Write Error (ROLLBACK Recommended)
-        put_refused       = 5                " Write not Allowed
+        doma_not_found    = 1
+        name_inconsistent = 2
+        doma_inconsistent = 3
+        put_failure       = 4
+        put_refused       = 5
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
@@ -510,13 +512,15 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
       EXPORTING
-        name        = l_domain_name    " Name of the Data Element to be Activated
+        name        = l_domain_name
+      IMPORTING
+        rc          = l_rc
       EXCEPTIONS
-        not_found   = 1                " Data Element not Found
-        put_failure = 2                " Data Element could not be Written
+        not_found   = 1
+        put_failure = 2
         OTHERS      = 3.
 
-    IF sy-subrc <> 0.
+    IF sy-subrc <> 0 OR l_rc > 4.
 
       r_response = |An error occurred while activating the domain { l_domain_name }.{ cl_abap_char_utilities=>newline }|.
 
@@ -552,7 +556,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     ELSE.
 
-      r_response = |{ r_response }Domain { l_domain_name } updated but it was not activated..|.
+      r_response = |{ r_response }Domain { l_domain_name } updated but not activated.|.
 
     ENDIF.
 
@@ -564,6 +568,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
   METHOD activate.
 
+    DATA l_rc TYPE i.
+
     CLEAR r_response.
 
     DATA(l_domain) = i_domain_name.
@@ -572,13 +578,15 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
       EXPORTING
-        name        = l_domain            " Name of the Data Element to be Activated
+        name        = l_domain
+      IMPORTING
+        rc          = l_rc
       EXCEPTIONS
-        not_found   = 1                         " Data Element not Found
-        put_failure = 2                         " Data Element could not be Written
+        not_found   = 1
+        put_failure = 2
         OTHERS      = 3.
 
-    IF sy-subrc <> 0.
+    IF sy-subrc <> 0 OR l_rc > 4.
       r_response = |An error occurred while activating the domain { l_domain }.'|.
       RETURN.
     ENDIF.
@@ -689,16 +697,16 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     CALL FUNCTION 'DDIF_DOMA_GET'
       EXPORTING
-        name          = l_domain_name           " Name of the Domain to be Read
-        state         = l_state                 " Read Status of the Domain
-        langu         = l_language              " Language in which Texts are Read
+        name          = l_domain_name
+        state         = l_state
+        langu         = l_language
       IMPORTING
-        gotstate      = l_state                 " Status in which Reading took Place
-        dd01v_wa      = ls_domain               " Header of the Domain
+        gotstate      = l_state
+        dd01v_wa      = ls_domain
       TABLES
-        dd07v_tab     = lt_fixed_values         " Fixed Domain Values
+        dd07v_tab     = lt_fixed_values
       EXCEPTIONS
-        illegal_input = 1                       " Value not Allowed for Parameter
+        illegal_input = 1
         OTHERS        = 2.
 
     IF sy-subrc <> 0.
