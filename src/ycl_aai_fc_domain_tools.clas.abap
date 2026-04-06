@@ -967,9 +967,9 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     DATA(l_create) = abap_false.
     DATA(l_read) = abap_false.
     DATA(l_update) = abap_false.
-    DATA(l_search) = abap_false.
+    DATA(l_search) = abap_true.
     DATA(l_get_translation) = abap_false.
-    DATA(l_set_translation) = abap_true.
+    DATA(l_set_translation) = abap_false.
 
 
     CASE abap_true.
