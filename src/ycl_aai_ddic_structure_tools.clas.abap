@@ -580,6 +580,99 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
 
   METHOD delete.
 
+    DATA lt_objects_with_references TYPE STANDARD TABLE OF dcobjbez.
+
+    DATA l_deleted TYPE abap_bool.
+
+    CLEAR r_response.
+
+    DATA(l_structure_name) = i_structure_name.
+
+    l_structure_name = condense( to_upper( l_structure_name ) ).
+
+    SELECT tabname, as4local
+      FROM dd02l
+      INTO TABLE @DATA(lt_dd01l)
+      WHERE tabname = @l_structure_name.
+
+    IF sy-subrc <> 0.
+      r_response = |Structure { l_structure_name } not found.|.
+      RETURN.
+    ENDIF.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    SELECT SINGLE pgmid, object, obj_name, masterlang, devclass
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_structure_name
+      INTO @DATA(ls_tadir).
+
+    CALL FUNCTION 'DDIF_OBJECT_DELETE'
+      EXPORTING
+        type                    = mc_object
+        name                    = l_structure_name
+      IMPORTING
+        deleted                 = l_deleted
+      TABLES
+        objects_with_references = lt_objects_with_references
+      EXCEPTIONS
+        illegal_input           = 1
+        no_authority            = 2
+        OTHERS                  = 3.
+
+    IF sy-subrc <> 0 OR l_deleted IS INITIAL.
+
+      r_response = |Structure { l_structure_name } was not deleted.|.
+
+      LOOP AT lt_objects_with_references ASSIGNING FIELD-SYMBOL(<ls_objects_with_references>).
+
+        IF sy-tabix = 1.
+          r_response = |{ r_response }{ cl_abap_char_utilities=>newline }The Structure { l_structure_name } is still being referenced by the following object(s):|.
+        ENDIF.
+
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Object Name: { <ls_objects_with_references>-name } Type: { <ls_objects_with_references>-type } |.
+
+      ENDLOOP.
+
+      RETURN.
+    ENDIF.
+
+    lo_cts_api->insert_object(
+      EXPORTING
+        i_s_object = VALUE #( trkorr = l_transport_request
+                              object = mc_object
+                              obj_name = l_structure_name )
+        i_object_class = 'DICT'
+        i_package = ls_tadir-devclass
+        i_language = sy-langu
+      IMPORTING
+        e_inserted = DATA(l_inserted)
+    ).
+
+    IF l_inserted = abap_false.
+      r_response = |{ r_response }Structure { l_structure_name } deleted but it was not possible to add it to the transport request { l_transport_request }.|.
+    ENDIF.
+
+    IF r_response IS INITIAL.
+      r_response = |Structure { l_structure_name } was deleted successfully.|.
+    ELSE.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Structure { l_structure_name } was deleted.|.
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD activate.
@@ -668,7 +761,8 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
     DATA(l_create) = abap_false.
     DATA(l_read) = abap_false.
     DATA(l_search) = abap_false.
-    DATA(l_update) = abap_true.
+    DATA(l_update) = abap_false.
+    DATA(l_delete) = abap_true.
 
 
     CASE abap_true.
@@ -707,6 +801,13 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
                        i_t_components      = VALUE #( ( field_name = 'DOCID' data_type = 'CHAR' length = '10' )
                                                       ( field_name = 'TOTAMT' data_type = 'CURR' length = '13' decimals = '2' ref_field = 'CURCY' )
                                                       ( field_name = 'CURCY' data_element = 'WAERS' ) )
+                     ).
+
+      WHEN l_delete.
+
+        l_response = me->delete(
+                       i_structure_name    = 'ZST_TEST_DDIF_TABL_PUT'
+                       i_transport_request = 'NPLK900132'
                      ).
 
     ENDCASE.

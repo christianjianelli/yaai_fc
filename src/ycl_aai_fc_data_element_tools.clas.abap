@@ -189,7 +189,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-      r_response = |An error occurred while creating the data element { l_data_element }.|.
+      r_response = |An error occurred while creating the Data Element { l_data_element }.|.
       RETURN.
     ENDIF.
 
@@ -230,7 +230,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS                         = 25.
 
     IF sy-subrc <> 0.
-      r_response = 'An error occurred while creating the TADIR entry for the newly created data element'.
+      r_response = 'An error occurred while creating the TADIR entry for the newly created Data Element'.
       RETURN.
     ENDIF.
 
@@ -245,7 +245,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-      r_response = |An error occurred while activating the data element { l_data_element }.'|.
+      r_response = |An error occurred while activating the Data Element { l_data_element }.'|.
       DATA(l_inactive) = abap_true.
     ENDIF.
 
@@ -264,14 +264,14 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     ).
 
     IF l_inserted = abap_false.
-      r_response = |{ r_response }Data element { l_data_element } created but it was not possible to add it to the transport request { l_transport_request }.|.
+      r_response = |{ r_response }Data Element { l_data_element } created but it was not possible to add it to the transport request { l_transport_request }.|.
       RETURN.
     ENDIF.
 
     IF l_inactive = abap_false.
-      r_response = |Data element { l_data_element } created successfully.|.
+      r_response = |Data Element { l_data_element } created successfully.|.
     ELSE.
-      r_response = |{ r_response }Data element { l_data_element } created but not activated.|.
+      r_response = |{ r_response }Data Element { l_data_element } created but not activated.|.
     ENDIF.
 
   ENDMETHOD.
@@ -320,7 +320,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS        = 2.
 
     IF sy-subrc <> 0.
-      r_response = |Error while reading data element { l_data_element }.|.
+      r_response = |Error while reading Data Element { l_data_element }.|.
       RETURN.
     ENDIF.
 
@@ -490,7 +490,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS        = 2.
 
     IF sy-subrc <> 0.
-      r_response = |Error while reading data element { l_data_element }.|.
+      r_response = |Error while reading Data Element { l_data_element }.|.
       RETURN.
     ENDIF.
 
@@ -539,7 +539,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-      r_response = |An error occurred while creating the data element { l_data_element }.|.
+      r_response = |An error occurred while creating the Data Element { l_data_element }.|.
       RETURN.
     ENDIF.
 
@@ -554,7 +554,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-      r_response = |An error occurred while activating the data element { l_data_element }.{ cl_abap_char_utilities=>newline }|.
+      r_response = |An error occurred while activating the Data Element { l_data_element }.{ cl_abap_char_utilities=>newline }|.
       DATA(l_inactive) = abap_true.
     ENDIF.
 
@@ -573,20 +573,113 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     ).
 
     IF l_inserted = abap_false.
-      r_response = |{ r_response }Data element { l_data_element } updated but it was not possible to add it to the transport request { l_transport_request }.|.
+      r_response = |{ r_response }Data Element { l_data_element } updated but it was not possible to add it to the transport request { l_transport_request }.|.
       RETURN.
     ENDIF.
 
     IF l_inactive = abap_false.
-      r_response = |{ r_response }Data element { l_data_element } updated successfully.|.
+      r_response = |{ r_response }Data Element { l_data_element } updated successfully.|.
     ELSE.
-      r_response = |{ r_response }Data element { l_data_element } updated but not activated.|.
+      r_response = |{ r_response }Data Element { l_data_element } updated but not activated.|.
     ENDIF.
 
   ENDMETHOD.
 
   METHOD delete.
-    "TODO
+
+    DATA lt_objects_with_references TYPE STANDARD TABLE OF dcobjbez.
+
+    DATA l_deleted TYPE abap_bool.
+
+    CLEAR r_response.
+
+    DATA(l_data_element) = i_data_element_name.
+
+    l_data_element = condense( to_upper( l_data_element ) ).
+
+    SELECT rollname, as4local
+      FROM dd04l
+      INTO TABLE @DATA(lt_dd01l)
+      WHERE rollname = @l_data_element.
+
+    IF sy-subrc <> 0.
+      r_response = |Data Element { l_data_element } not found.|.
+      RETURN.
+    ENDIF.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    SELECT SINGLE pgmid, object, obj_name, masterlang, devclass
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_data_element
+      INTO @DATA(ls_tadir).
+
+    CALL FUNCTION 'DDIF_OBJECT_DELETE'
+      EXPORTING
+        type                    = mc_object
+        name                    = l_data_element
+      IMPORTING
+        deleted                 = l_deleted
+      TABLES
+        objects_with_references = lt_objects_with_references
+      EXCEPTIONS
+        illegal_input           = 1
+        no_authority            = 2
+        OTHERS                  = 3.
+
+    IF sy-subrc <> 0 OR l_deleted IS INITIAL.
+
+      r_response = |Data Element { l_data_element } was not deleted.|.
+
+      LOOP AT lt_objects_with_references ASSIGNING FIELD-SYMBOL(<ls_objects_with_references>).
+
+        IF sy-tabix = 1.
+          r_response = |{ r_response }{ cl_abap_char_utilities=>newline }The Data Element { l_data_element } is still being referenced by the following object(s):|.
+        ENDIF.
+
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Object Name: { <ls_objects_with_references>-name } Type: { <ls_objects_with_references>-type } |.
+
+      ENDLOOP.
+
+      RETURN.
+    ENDIF.
+
+    lo_cts_api->insert_object(
+      EXPORTING
+        i_s_object = VALUE #( trkorr = l_transport_request
+                              object = mc_object
+                              obj_name = l_data_element )
+        i_object_class = 'DICT'
+        i_package = ls_tadir-devclass
+        i_language = sy-langu
+      IMPORTING
+        e_inserted = DATA(l_inserted)
+    ).
+
+    IF l_inserted = abap_false.
+      r_response = |{ r_response }Data Element { l_data_element } deleted but it was not possible to add it to the transport request { l_transport_request }.|.
+    ENDIF.
+
+    IF r_response IS INITIAL.
+      r_response = |Data Element { l_data_element } was deleted successfully.|.
+    ELSE.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Data Element { l_data_element } was deleted.|.
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD get_translation.
@@ -647,7 +740,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     ELSE.
 
-      r_response = |No translation to language `{ l_language }` found for data element { l_data_element }.|.
+      r_response = |No translation to language `{ l_language }` found for Data Element { l_data_element }.|.
 
     ENDIF.
 
@@ -783,11 +876,11 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-      r_response = |An error occurred while activating the data element { l_data_element }.'|.
+      r_response = |An error occurred while activating the Data Element { l_data_element }.'|.
       RETURN.
     ENDIF.
 
-    r_response = |Data element { l_data_element } activated successfully.|.
+    r_response = |Data Element { l_data_element } activated successfully.|.
 
   ENDMETHOD.
 
@@ -848,8 +941,9 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     DATA(l_create) = abap_false.
     DATA(l_read) = abap_false.
     DATA(l_search) = abap_false.
+    DATA(l_delete) = abap_true.
     DATA(l_get_translation) = abap_false.
-    DATA(l_set_translation) = abap_true.
+    DATA(l_set_translation) = abap_false.
 
     CASE abap_true.
 
@@ -867,7 +961,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
             i_label_medium      = 'DDIF_DTEL_PUT'
             i_label_long        = 'Test DTEL create via DDIF_DTEL_PUT'
             i_label_heading     = 'Test DTEL create via DDIF_DTEL_PUT'
-            i_transport_request = 'NPLK900134'
+            i_transport_request = 'NPLK900132'
             i_package           = 'Z001'
           RECEIVING
             r_response          = l_response
@@ -883,6 +977,13 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
                        i_package           = 'Z001'
                        i_data_element_name = 'BUS'
 *                       i_short_description =
+                     ).
+
+      WHEN l_delete.
+
+        l_response = me->delete(
+                       i_data_element_name = 'ZDE_TEST_DDIF_DTEL_PUT4'
+                       i_transport_request = 'NPLK900132'
                      ).
 
       WHEN l_get_translation.
