@@ -1,4 +1,4 @@
-CLASS ycl_aai_ddic_table_type_tools DEFINITION
+CLASS ycl_aai_fc_table_type_tools DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC .
@@ -71,7 +71,7 @@ ENDCLASS.
 
 
 
-CLASS ycl_aai_ddic_table_type_tools IMPLEMENTATION.
+CLASS ycl_aai_fc_table_type_tools IMPLEMENTATION.
 
   METHOD create.
 

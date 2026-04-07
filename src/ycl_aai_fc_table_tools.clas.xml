@@ -3,9 +3,9 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>YCL_AAI_DDIC_TABLE_TYPE_TOOLS</CLSNAME>
+    <CLSNAME>YCL_AAI_FC_TABLE_TOOLS</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>ABAP AI tools - DDIC Table Type tools</DESCRIPT>
+    <DESCRIPT>ABAP AI tools - DDIC Database Table tools</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>
