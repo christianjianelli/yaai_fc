@@ -117,11 +117,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
 
     IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
-
       r_response = |The transport request { l_transport_request } is invalid.|.
-
       RETURN.
-
     ENDIF.
 
     DATA(l_package) = i_package.
@@ -139,11 +136,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       ).
 
       IF l_data_type IS INITIAL.
-
         r_response = l_error.
-
         RETURN.
-
       ENDIF.
 
     ENDIF.
@@ -186,11 +180,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-
       r_response = |An error occurred while creating the domain { l_domain_name }.|.
-
       RETURN.
-
     ENDIF.
 
     CALL FUNCTION 'TR_TADIR_INTERFACE'
@@ -230,11 +221,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
         OTHERS                         = 25.
 
     IF sy-subrc <> 0.
-
       r_response = |An error occurred while creating the TADIR entry for the newly created domain { l_domain_name }.|.
-
       RETURN.
-
     ENDIF.
 
     CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
@@ -248,11 +236,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-
       r_response = |An error occurred while activating the domain { l_domain_name }. { cl_abap_char_utilities=>newline }|.
-
       DATA(l_inactive) = abap_true.
-
     ENDIF.
 
     COMMIT WORK.
@@ -270,11 +255,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     ).
 
     IF l_inserted = abap_false.
-
       r_response = |{ r_response }Domain { l_domain_name } created but it was not possible to add it to the transport request { l_transport_request }.|.
-
       RETURN.
-
     ENDIF.
 
     IF l_inactive = abap_false.
@@ -297,7 +279,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     l_domain_name = condense( to_upper( l_domain_name ) ).
 
-    SELECT as4local, as4vers
+    SELECT domname, as4local
       FROM dd01l
       INTO TABLE @DATA(lt_dd01l)
       WHERE domname = @l_domain_name.
@@ -306,9 +288,6 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       r_response = |Domain { l_domain_name } doesn't exist.|.
       RETURN.
     ENDIF.
-
-    READ TABLE lt_dd01l INTO DATA(ls_dd01l)
-      WITH KEY as4vers = 'A'.
 
     IF me->is_active( l_domain_name ) = abap_true.
       l_state = 'A'.
@@ -443,11 +422,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       ).
 
       IF l_data_type IS INITIAL.
-
         r_response = l_error.
-
         RETURN.
-
       ENDIF.
 
     ENDIF.
@@ -503,11 +479,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-
       r_response = |An error occurred while creating the domain { l_domain_name }.|.
-
       RETURN.
-
     ENDIF.
 
     CALL FUNCTION 'DDIF_DOMA_ACTIVATE'
@@ -521,11 +494,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-
       r_response = |An error occurred while activating the domain { l_domain_name }.{ cl_abap_char_utilities=>newline }|.
-
       DATA(l_inactive) = abap_true.
-
     ENDIF.
 
     COMMIT WORK.
@@ -543,11 +513,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     ).
 
     IF l_inserted = abap_false.
-
       r_response = |{ r_response }Domain { l_domain_name } updated but it was not possible to add it to the transport request { l_transport_request }.|.
-
       RETURN.
-
     ENDIF.
 
     IF l_inactive = abap_false.
@@ -674,7 +641,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     l_domain_name = condense( to_upper( l_domain_name ) ).
 
-    SELECT as4local, as4vers
+    SELECT domname, as4local
       FROM dd01l
       INTO TABLE @DATA(lt_dd01l)
       WHERE domname = @l_domain_name.
@@ -683,9 +650,6 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       r_response = |Domain { l_domain_name } doesn't exist.|.
       RETURN.
     ENDIF.
-
-    READ TABLE lt_dd01l INTO DATA(ls_dd01l)
-      WITH KEY as4vers = 'A'.
 
     IF me->is_active( l_domain_name ) = abap_true.
       l_state = 'A'.
@@ -775,11 +739,8 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
 
     IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
-
       r_response = |The transport request { l_transport_request } is invalid.|.
-
       RETURN.
-
     ENDIF.
 
     SELECT language, r3_lang

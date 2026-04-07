@@ -4,6 +4,67 @@ CLASS ycl_aai_ddic_table_type_tools DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
+
+    INTERFACES if_oo_adt_classrun.
+
+    CONSTANTS: mc_pgmid  TYPE e071-pgmid  VALUE 'R3TR',
+               mc_object TYPE e071-object VALUE 'TTYP'.
+
+    METHODS create
+      IMPORTING
+                i_table_type_name   TYPE yde_aai_fc_table_type
+                i_short_description TYPE as4text
+                i_rowtype           TYPE ttrowtype
+                i_transport_request TYPE yde_aai_fc_transport_request
+                i_package           TYPE packname
+      RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS read
+      IMPORTING
+                i_table_type_name TYPE yde_aai_fc_table_type
+      RETURNING VALUE(r_response) TYPE string.
+
+    METHODS update
+      IMPORTING
+                i_table_type_name   TYPE yde_aai_fc_table_type
+                i_short_description TYPE as4text OPTIONAL
+                i_rowtype           TYPE ttrowtype OPTIONAL
+                i_transport_request TYPE yde_aai_fc_transport_request
+      RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS delete
+      IMPORTING
+                i_table_type_name   TYPE yde_aai_fc_table_type
+                i_transport_request TYPE yde_aai_fc_transport_request
+      RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS search
+      IMPORTING
+                i_package           TYPE packname
+                i_table_type_name   TYPE yde_aai_fc_table_type OPTIONAL
+                i_short_description TYPE as4text OPTIONAL
+      RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS activate
+      IMPORTING
+                i_table_type_name TYPE yde_aai_fc_table_type
+      RETURNING VALUE(r_response) TYPE string.
+
+    METHODS exists
+      IMPORTING
+                i_table_type_name TYPE yde_aai_fc_table_type
+      RETURNING VALUE(r_exists)   TYPE abap_bool.
+
+    METHODS is_locked
+      IMPORTING
+                i_table_type_name TYPE yde_aai_fc_table_type
+      RETURNING VALUE(r_locked)   TYPE abap_bool.
+
+    METHODS is_active
+      IMPORTING
+                i_table_type_name TYPE yde_aai_fc_table_type
+      RETURNING VALUE(r_active)   TYPE abap_bool.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -11,4 +72,565 @@ ENDCLASS.
 
 
 CLASS ycl_aai_ddic_table_type_tools IMPLEMENTATION.
+
+  METHOD create.
+
+    DATA lt_fixed_values TYPE STANDARD TABLE OF dd07v.
+
+    DATA ls_table_type TYPE dd40v.
+
+    DATA l_rc TYPE i.
+
+    DATA(l_table_type_name) = i_table_type_name.
+
+    l_table_type_name = condense( to_upper( l_table_type_name ) ).
+
+    DATA(l_rowtype) = i_rowtype.
+
+    l_rowtype = condense( to_upper( l_rowtype ) ).
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    DATA(l_package) = i_package.
+
+    l_package = condense( to_upper( l_package ) ).
+
+    ls_table_type-typename = l_table_type_name.
+    ls_table_type-ddlanguage = sy-langu.
+    ls_table_type-ddtext = i_short_description.
+    ls_table_type-rowtype = l_rowtype.
+    ls_table_type-as4user = sy-uname.
+    ls_table_type-as4date = sy-datum.
+    ls_table_type-as4time = sy-uzeit.
+
+    CALL FUNCTION 'DDIF_TTYP_PUT'
+      EXPORTING
+        name              = l_table_type_name
+        dd40v_wa          = ls_table_type
+      EXCEPTIONS
+        ttyp_not_found    = 1
+        name_inconsistent = 2
+        ttyp_inconsistent = 3
+        put_failure       = 4
+        put_refused       = 5
+        OTHERS            = 6.
+
+    IF sy-subrc <> 0.
+      r_response = |An error occurred while creating the table type { l_table_type_name }.|.
+      RETURN.
+    ENDIF.
+
+    CALL FUNCTION 'TR_TADIR_INTERFACE'
+      EXPORTING
+        wi_test_modus                  = ' '
+        wi_tadir_pgmid                 = mc_pgmid
+        wi_tadir_object                = mc_object
+        wi_tadir_obj_name              = CONV sobj_name( l_table_type_name )
+        wi_tadir_author                = sy-uname
+        wi_tadir_devclass              = l_package
+        wi_set_genflag                 = abap_false
+      EXCEPTIONS
+        tadir_entry_not_existing       = 1
+        tadir_entry_ill_type           = 2
+        no_systemname                  = 3
+        no_systemtype                  = 4
+        original_system_conflict       = 5
+        object_reserved_for_devclass   = 6
+        object_exists_global           = 7
+        object_exists_local            = 8
+        object_is_distributed          = 9
+        obj_specification_not_unique   = 10
+        no_authorization_to_delete     = 11
+        devclass_not_existing          = 12
+        simultanious_set_remove_repair = 13
+        order_missing                  = 14
+        no_modification_of_head_syst   = 15
+        pgmid_object_not_allowed       = 16
+        masterlanguage_not_specified   = 17
+        devclass_not_specified         = 18
+        specify_owner_unique           = 19
+        loc_priv_objs_no_repair        = 20
+        gtadir_not_reached             = 21
+        object_locked_for_order        = 22
+        change_of_class_not_allowed    = 23
+        no_change_from_sap_to_tmp      = 24
+        OTHERS                         = 25.
+
+    IF sy-subrc <> 0.
+      r_response = |An error occurred while creating the TADIR entry for the newly created table type { l_table_type_name }.|.
+      RETURN.
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_TTYP_ACTIVATE'
+      EXPORTING
+        name        = l_table_type_name
+      IMPORTING
+        rc          = l_rc
+      EXCEPTIONS
+        not_found   = 1
+        put_failure = 2
+        OTHERS      = 3.
+
+    IF sy-subrc <> 0 OR l_rc > 4.
+      r_response = |An error occurred while activating the table type { l_table_type_name }. { cl_abap_char_utilities=>newline }|.
+      DATA(l_inactive) = abap_true.
+    ENDIF.
+
+    COMMIT WORK.
+
+    lo_cts_api->insert_object(
+      EXPORTING
+        i_s_object = VALUE #( trkorr = l_transport_request
+                              object = mc_object
+                              obj_name = l_table_type_name )
+        i_object_class = 'DICT'
+        i_package = l_package
+        i_language = sy-langu
+      IMPORTING
+        e_inserted = DATA(l_inserted)
+    ).
+
+    IF l_inserted = abap_false.
+      r_response = |{ r_response }Table Type { l_table_type_name } created but it was not possible to add it to the transport request { l_transport_request }.|.
+      RETURN.
+    ENDIF.
+
+    IF l_inactive = abap_false.
+      r_response = |Table Type { l_table_type_name } created successfully.|.
+    ELSE.
+      r_response = |{ r_response }Table Type { l_table_type_name } created but not activated.|.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD read.
+
+    DATA ls_table_type TYPE dd40v.
+
+    DATA l_state TYPE ddobjstate.
+
+    DATA(l_table_type_name) = i_table_type_name.
+
+    l_table_type_name = condense( to_upper( l_table_type_name ) ).
+
+    SELECT typename, as4local
+      FROM dd40l
+      INTO TABLE @DATA(lt_dd40l)
+      WHERE typename = @l_table_type_name.
+
+    IF sy-subrc <> 0.
+      r_response = |Table Type { l_table_type_name } not found.|.
+      RETURN.
+    ENDIF.
+
+    READ TABLE lt_dd40l INTO DATA(ls_dd40l)
+      WITH KEY as4local = 'A'.
+
+    IF me->is_active( l_table_type_name ) = abap_true.
+      l_state = 'A'.
+    ENDIF.
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_table_type_name
+      INTO @DATA(ls_tadir).
+
+    CALL FUNCTION 'DDIF_TTYP_GET'
+      EXPORTING
+        name          = l_table_type_name
+        state         = l_state
+        langu         = ls_tadir-masterlang
+      IMPORTING
+        gotstate      = l_state
+        dd40v_wa      = ls_table_type
+      EXCEPTIONS
+        illegal_input = 1
+        OTHERS        = 2.
+
+    IF sy-subrc <> 0.
+      r_response = |Error while reading table type { l_table_type_name }.|.
+      RETURN.
+    ENDIF.
+
+    r_response = |Table Type: { l_table_type_name }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Description: { ls_table_type-ddtext }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Line Type: { ls_table_type-rowtype }{ cl_abap_char_utilities=>newline }|.
+
+
+    CASE ls_table_type-datatype.
+
+      WHEN 'STRU'.
+
+        r_response = |{ r_response }Type: DDIC Structure{ cl_abap_char_utilities=>newline }|.
+
+      WHEN OTHERS.
+
+        r_response = |{ r_response }Type: { ls_table_type-datatype }{ cl_abap_char_utilities=>newline }|.
+
+    ENDCASE.
+
+    IF l_state <> 'A'.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }WARNING: the table type is not active.|.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD update.
+
+    DATA ls_table_type TYPE dd40v.
+
+    DATA: l_state TYPE ddobjstate VALUE 'A',
+          l_rc    TYPE i.
+
+    CLEAR r_response.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    DATA(l_table_type_name) = i_table_type_name.
+
+    l_table_type_name = condense( to_upper( l_table_type_name ) ).
+
+    DATA(l_rowtype) = i_rowtype.
+
+    l_rowtype = condense( to_upper( l_rowtype ) ).
+
+    IF me->exists( l_table_type_name ) = abap_false.
+      r_response = |Table Type { l_table_type_name } not found.|.
+      RETURN.
+    ENDIF.
+
+    IF me->is_locked( l_table_type_name ) = abap_true.
+      r_response = |Table Type { l_table_type_name } is locked.|.
+      RETURN.
+    ENDIF.
+
+    IF me->is_active( l_table_type_name ) = abap_false.
+      l_state = 'M'.
+    ENDIF.
+
+    SELECT SINGLE pgmid, object, obj_name, masterlang, devclass
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_table_type_name
+      INTO @DATA(ls_tadir).
+
+    CALL FUNCTION 'DDIF_TTYP_GET'
+      EXPORTING
+        name          = l_table_type_name
+        state         = l_state
+        langu         = ls_tadir-masterlang
+      IMPORTING
+        gotstate      = l_state
+        dd40v_wa      = ls_table_type
+      EXCEPTIONS
+        illegal_input = 1
+        OTHERS        = 2.
+
+    IF sy-subrc <> 0.
+      r_response = |Error while reading table type { l_table_type_name }.|.
+      RETURN.
+    ENDIF.
+
+    IF i_short_description IS NOT INITIAL.
+      ls_table_type-ddtext = i_short_description.
+    ENDIF.
+
+    IF l_rowtype IS NOT INITIAL.
+      ls_table_type-rowtype = l_rowtype.
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_TTYP_PUT'
+      EXPORTING
+        name              = l_table_type_name
+        dd40v_wa          = ls_table_type
+      EXCEPTIONS
+        ttyp_not_found    = 1                " No Definition Exists for Table Type
+        name_inconsistent = 2                " Name in Sources Inconsistent with NAME
+        ttyp_inconsistent = 3                " Inconsistent Sources
+        put_failure       = 4                " Write Error (ROLLBACK Recommended)
+        put_refused       = 5                " Write not Allowed
+        OTHERS            = 6.
+
+    IF sy-subrc <> 0.
+      r_response = |An error occurred while creating the table type { l_table_type_name }.|.
+      RETURN.
+    ENDIF.
+
+    CALL FUNCTION 'DDIF_TTYP_ACTIVATE'
+      EXPORTING
+        name        = l_table_type_name
+      IMPORTING
+        rc          = l_rc
+      EXCEPTIONS
+        not_found   = 1
+        put_failure = 2
+        OTHERS      = 3.
+
+    IF sy-subrc <> 0 OR l_rc > 4.
+      r_response = |An error occurred while activating the table type { l_table_type_name }.{ cl_abap_char_utilities=>newline }|.
+      DATA(l_inactive) = abap_true.
+    ENDIF.
+
+    COMMIT WORK.
+
+    lo_cts_api->insert_object(
+      EXPORTING
+        i_s_object = VALUE #( trkorr = l_transport_request
+                              object = mc_object
+                              obj_name = l_table_type_name )
+        i_object_class = 'DICT'
+        i_package = ls_tadir-devclass
+        i_language = sy-langu
+      IMPORTING
+        e_inserted = DATA(l_inserted)
+    ).
+
+    IF l_inserted = abap_false.
+
+      r_response = |{ r_response }Table Type { l_table_type_name } updated but it was not possible to add it to the transport request { l_transport_request }.|.
+
+      RETURN.
+
+    ENDIF.
+
+    IF l_inactive = abap_false.
+
+      r_response = |Table Type { l_table_type_name } updated successfully.|.
+
+    ELSE.
+
+      r_response = |{ r_response }Table Type { l_table_type_name } updated but not activated.|.
+
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD delete.
+    "TODO
+  ENDMETHOD.
+
+  METHOD activate.
+
+    DATA l_rc TYPE i.
+
+    CLEAR r_response.
+
+    DATA(l_table_type_name) = i_table_type_name.
+
+    l_table_type_name = condense( to_upper( l_table_type_name ) ).
+
+    CALL FUNCTION 'DDIF_TTYP_ACTIVATE'
+      EXPORTING
+        name        = l_table_type_name
+      IMPORTING
+        rc          = l_rc
+      EXCEPTIONS
+        not_found   = 1
+        put_failure = 2
+        OTHERS      = 3.
+
+    IF sy-subrc <> 0 OR l_rc > 4.
+      r_response = |An error occurred while activating the table type { l_table_type_name }.'|.
+      RETURN.
+    ENDIF.
+
+    r_response = |Table Type { l_table_type_name } activated successfully.|.
+
+  ENDMETHOD.
+
+  METHOD search.
+
+    DATA: l_table_type_name   TYPE string,
+          l_short_description TYPE string.
+
+    CLEAR r_response.
+
+    DATA(l_package) = i_package.
+
+    l_package = condense( to_upper( l_package ) ).
+
+    SELECT pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND devclass = @l_package
+      INTO TABLE @DATA(lt_tadir).
+
+    IF sy-subrc <> 0.
+      RETURN.
+    ENDIF.
+
+    l_table_type_name = |*{ i_table_type_name }*|.
+
+    l_short_description = |*{ i_short_description }*|.
+
+    LOOP AT lt_tadir ASSIGNING FIELD-SYMBOL(<ls_tadir>).
+
+      IF i_table_type_name IS NOT INITIAL.
+
+        IF NOT <ls_tadir>-obj_name CP l_table_type_name.
+          CONTINUE.
+        ENDIF.
+
+      ENDIF.
+
+      SELECT SINGLE typename, ddlanguage, rowtype, datatype, leng, decimals, ddtext
+        FROM dd40vv
+        WHERE typename = @<ls_tadir>-obj_name
+          AND ddlanguage = @<ls_tadir>-masterlang
+        INTO @DATA(ls_dd40vv).
+
+      IF i_short_description IS NOT INITIAL.
+
+        IF NOT ls_dd40vv-ddtext CP l_short_description.
+          CONTINUE.
+        ENDIF.
+
+      ENDIF.
+
+      IF r_response IS NOT INITIAL.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }|.
+      ENDIF.
+
+      r_response = |{ r_response }Table Type: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Description: { ls_dd40vv-ddtext }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Line Type: { ls_dd40vv-rowtype }{ cl_abap_char_utilities=>newline }|.
+
+      CASE ls_dd40vv-datatype.
+
+        WHEN 'STRU'.
+
+          r_response = |{ r_response }Type: DDIC Structure|.
+
+        WHEN OTHERS.
+
+          r_response = |{ r_response }Type: { ls_dd40vv-datatype }|.
+
+      ENDCASE.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD exists.
+
+    SELECT SINGLE @abap_true
+      FROM dd40l
+      INTO @r_exists
+      WHERE typename = @i_table_type_name.
+
+  ENDMETHOD.
+
+  METHOD is_active.
+
+    SELECT SINGLE @abap_true
+      FROM dd40l
+      INTO @r_active
+      WHERE typename = @i_table_type_name
+        AND as4local = 'A'.
+
+  ENDMETHOD.
+
+  METHOD is_locked.
+
+    DATA: lt_lock_entries TYPE STANDARD TABLE OF seqg3.
+
+    DATA: l_argument TYPE seqg3-garg.
+
+    r_locked = abap_false.
+
+    l_argument = |{ mc_object }{ i_table_type_name }|.
+
+    CALL FUNCTION 'ENQUEUE_READ'
+      EXPORTING
+        guname                = '*'
+        garg                  = l_argument
+      TABLES
+        enq                   = lt_lock_entries
+      EXCEPTIONS
+        communication_failure = 0
+        system_failure        = 0
+        OTHERS                = 0.
+
+    READ TABLE lt_lock_entries
+      TRANSPORTING NO FIELDS
+      WITH KEY gobj = 'ESDICT'.
+
+    IF sy-subrc = 0.
+      r_locked = abap_true.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD if_oo_adt_classrun~main.
+
+    DATA l_response TYPE string.
+
+    DATA(l_create) = abap_false.
+    DATA(l_read) = abap_false.
+    DATA(l_update) = abap_true.
+    DATA(l_search) = abap_false.
+
+    CASE abap_true.
+
+      WHEN l_create.
+
+        l_response = me->create(
+                       i_table_type_name   = 'ZTT_TEST_DDIF_TTYP_PUT'
+                       i_short_description = 'Test DDIF_TTYP_PUT'
+                       i_rowtype           = 'ZST_LVL_1'
+                       i_transport_request = 'NPLK900133'
+                       i_package           = 'Z001'
+                     ).
+
+      WHEN l_read.
+
+        l_response = me->read( i_table_type_name = 'ZTT_TEST_DDIF_TTYP_PUT' ).
+
+      WHEN l_update.
+
+        l_response = me->update(
+                       i_table_type_name   = 'ZTT_TEST_DDIF_TTYP_PUT'
+                       i_short_description = 'Test Upd'
+                       i_rowtype           = 'ZST_LVL_2'
+                       i_transport_request = 'NPLK900133'
+                     ).
+
+      WHEN l_search.
+
+        l_response = me->search( i_package = 'YAAI' ).
+
+    ENDCASE.
+
+    out->write( l_response ).
+
+  ENDMETHOD.
+
 ENDCLASS.

@@ -189,11 +189,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-
       r_response = |An error occurred while creating the data element { l_data_element }.|.
-
       RETURN.
-
     ENDIF.
 
     CALL FUNCTION 'TR_TADIR_INTERFACE'
@@ -233,11 +230,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS                         = 25.
 
     IF sy-subrc <> 0.
-
       r_response = 'An error occurred while creating the TADIR entry for the newly created data element'.
-
       RETURN.
-
     ENDIF.
 
     CALL FUNCTION 'DDIF_DTEL_ACTIVATE'
@@ -251,11 +245,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-
       r_response = |An error occurred while activating the data element { l_data_element }.'|.
-
       DATA(l_inactive) = abap_true.
-
     ENDIF.
 
     COMMIT WORK.
@@ -273,11 +264,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     ).
 
     IF l_inserted = abap_false.
-
       r_response = |{ r_response }Data element { l_data_element } created but it was not possible to add it to the transport request { l_transport_request }.|.
-
       RETURN.
-
     ENDIF.
 
     IF l_inactive = abap_false.
@@ -298,7 +286,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     l_data_element = condense( to_upper( l_data_element ) ).
 
-    SELECT as4local, as4vers
+    SELECT rollname, as4local
       FROM dd04l
       INTO TABLE @DATA(lt_dd01l)
       WHERE rollname = @l_data_element.
@@ -307,9 +295,6 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       r_response = |Data Element { l_data_element } not found.|.
       RETURN.
     ENDIF.
-
-    READ TABLE lt_dd01l INTO DATA(ls_dd01l)
-      WITH KEY as4vers = 'A'.
 
     IF me->is_active( l_data_element ) = abap_true.
       l_state = 'A'.
@@ -435,7 +420,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     DATA ls_data_element TYPE dd04v.
 
-    DATA l_state TYPE ddobjstate.
+    DATA l_state TYPE ddobjstate VALUE 'A'.
 
     DATA l_rc TYPE i.
 
@@ -450,11 +435,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
 
     IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
-
       r_response = |The transport request { l_transport_request } is invalid.|.
-
       RETURN.
-
     ENDIF.
 
     SELECT as4local, as4vers
@@ -467,11 +449,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    READ TABLE lt_dd01l INTO DATA(ls_dd01l)
-      WITH KEY as4vers = 'A'.
-
-    IF me->is_active( l_data_element ) = abap_true.
-      l_state = 'A'.
+    IF me->is_active( l_data_element ) = abap_false.
+      l_state = 'M'.
     ENDIF.
 
     SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
@@ -492,11 +471,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       ).
 
       IF l_data_type IS INITIAL.
-
         r_response = l_error.
-
         RETURN.
-
       ENDIF.
 
     ENDIF.
@@ -563,11 +539,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-
       r_response = |An error occurred while creating the data element { l_data_element }.|.
-
       RETURN.
-
     ENDIF.
 
     CALL FUNCTION 'DDIF_DTEL_ACTIVATE'
@@ -581,11 +554,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-
       r_response = |An error occurred while activating the data element { l_data_element }.{ cl_abap_char_utilities=>newline }|.
-
       DATA(l_inactive) = abap_true.
-
     ENDIF.
 
     COMMIT WORK.
@@ -603,11 +573,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     ).
 
     IF l_inserted = abap_false.
-
       r_response = |{ r_response }Data element { l_data_element } updated but it was not possible to add it to the transport request { l_transport_request }.|.
-
       RETURN.
-
     ENDIF.
 
     IF l_inactive = abap_false.
@@ -728,11 +695,8 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
 
     IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
-
       r_response = |The transport request { l_transport_request } is invalid.|.
-
       RETURN.
-
     ENDIF.
 
     SELECT language, r3_lang

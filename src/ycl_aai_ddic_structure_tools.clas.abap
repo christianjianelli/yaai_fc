@@ -165,9 +165,7 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-
       r_response = |An error occurred while creating the structure { l_structure_name }.|.
-
       RETURN.
     ENDIF.
 
@@ -208,11 +206,8 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
         OTHERS                         = 25.
 
     IF sy-subrc <> 0.
-
       r_response = |An error occurred while creating the TADIR entry for the newly created structure { l_structure_name }.|.
-
       RETURN.
-
     ENDIF.
 
     CALL FUNCTION 'DDIF_TABL_ACTIVATE'
@@ -226,11 +221,8 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-
       r_response = |An error occurred while activating the structure { l_structure_name }. { cl_abap_char_utilities=>newline }|.
-
       DATA(l_inactive) = abap_true.
-
     ENDIF.
 
     COMMIT WORK.
@@ -248,11 +240,8 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
     ).
 
     IF l_inserted = abap_false.
-
       r_response = |{ r_response }Structure { l_structure_name } created but it was not possible to add it to the transport request { l_transport_request }.|.
-
       RETURN.
-
     ENDIF.
 
     IF l_inactive = abap_false.
@@ -543,9 +532,7 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-
       r_response = |An error occurred while updating the structure { l_structure_name }.|.
-
       RETURN.
     ENDIF.
 
@@ -560,11 +547,8 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-
       r_response = |An error occurred while activating the structure { l_structure_name }. { cl_abap_char_utilities=>newline }|.
-
       DATA(l_inactive) = abap_true.
-
     ENDIF.
 
     COMMIT WORK.
@@ -582,11 +566,8 @@ CLASS ycl_aai_ddic_structure_tools IMPLEMENTATION.
     ).
 
     IF l_inserted = abap_false.
-
       r_response = |{ r_response }Structure { l_structure_name } updated but it was not possible to add it to the transport request { l_transport_request }.|.
-
       RETURN.
-
     ENDIF.
 
     IF l_inactive = abap_false.
