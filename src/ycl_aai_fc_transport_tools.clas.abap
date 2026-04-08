@@ -7,13 +7,13 @@ CLASS ycl_aai_fc_transport_tools DEFINITION
 
     INTERFACES if_oo_adt_classrun.
 
-    CONSTANTS: mc_workbench   TYPE string VALUE 'WORKBENCH',
-               mc_customizing TYPE string VALUE 'CUSTOMIZING'.
+    CONSTANTS: mc_workbench   TYPE string VALUE 'W',
+               mc_customizing TYPE string VALUE 'C'.
 
     METHODS create
       IMPORTING
                 i_description      TYPE as4text
-                i_request_category TYPE string OPTIONAL
+                i_request_category TYPE yde_aai_fc_transp_req_categ OPTIONAL
       RETURNING VALUE(r_response)  TYPE string.
 
     METHODS read
@@ -40,7 +40,7 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
 
     DATA l_transport_request TYPE trkorr.
 
-    DATA(l_request_category) = condense( to_upper( i_request_category ) ).
+    DATA(l_request_category) = to_upper( i_request_category ).
 
     DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
 
@@ -101,7 +101,7 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
         l_response = me->create(
           EXPORTING
             i_description = 'Test customizing request tool'
-            i_request_category = 'CUSTOMIZING'
+            i_request_category = 'C'
         ).
 
     ENDCASE.
