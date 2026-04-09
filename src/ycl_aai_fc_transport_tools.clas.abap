@@ -82,6 +82,38 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
 
   METHOD read.
 
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    lo_cts_api->read(
+      EXPORTING
+        i_transport_request = l_transport_request
+      IMPORTING
+        e_s_header          = DATA(ls_header)
+        e_t_objects         = DATA(lt_objects)
+    ).
+
+    r_response = |Transport request: { l_transport_request }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_header-as4text }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Objects:|.
+
+    LOOP AT lt_objects ASSIGNING FIELD-SYMBOL(<ls_object>).
+
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - { <ls_object>-pgmid } { <ls_object>-object } { <ls_object>-obj_name }|.
+
+    ENDLOOP.
+
   ENDMETHOD.
 
   METHOD search.
@@ -140,7 +172,8 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_search) = abap_true.
+    DATA(l_read) = abap_true.
+    DATA(l_search) = abap_false.
 
     DATA(l_add_object) = abap_true.
 
@@ -157,6 +190,10 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
       WHEN l_search.
 
         l_response = me->search( 'AI' ).
+
+      WHEN l_read.
+
+        l_response = me->read( 'NPLK900129' ).
 
     ENDCASE.
 

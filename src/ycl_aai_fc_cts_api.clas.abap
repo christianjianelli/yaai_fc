@@ -13,6 +13,13 @@ CLASS ycl_aai_fc_cts_api DEFINITION
                 i_request_category         TYPE trfunction DEFAULT 'K'
       RETURNING VALUE(r_transport_request) TYPE trkorr.
 
+    METHODS read
+      IMPORTING
+        i_transport_request TYPE trkorr
+      EXPORTING
+        e_s_header          TYPE trwbo_request_header
+        e_t_objects         TYPE trwbo_t_e071.
+
     METHODS add_object
       IMPORTING
                 i_transport_request TYPE trkorr
@@ -57,6 +64,54 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
             iv_request_category = i_request_category              " Type of Request/Task
             it_users            = VALUE #( ( user = sy-uname      " Tasks for Users
                                              type = 'S' ) ) ).
+
+      CATCH cx_cts_rest_api_exception ##NO_HANDLER. " CTS REST API Exception
+
+    ENDTRY.
+
+  ENDMETHOD.
+
+  METHOD read.
+
+    DATA ls_request TYPE trwbo_request.
+
+    TRY.
+
+        DATA(lo_cts_api) = NEW cl_cts_rest_api_impl( ).
+
+        lo_cts_api->if_cts_rest_api~get_request_and_tasks(
+          EXPORTING
+            iv_trkorr   = i_transport_request
+          IMPORTING
+            et_requests = DATA(lt_requests)
+        ).
+
+        LOOP AT lt_requests ASSIGNING FIELD-SYMBOL(<ls_request>).
+
+          ls_request-h-trkorr = <ls_request>-trkorr.
+
+          lo_cts_api->if_cts_rest_api~get_request_data(
+            EXPORTING
+              iv_read_headers    = abap_true
+              iv_read_descr      = abap_true
+              iv_read_objs       = abap_true
+            CHANGING
+              cs_request         = ls_request
+          ).
+
+          IF <ls_request>-trkorr = i_transport_request.
+            e_s_header = ls_request-h.
+          ENDIF.
+
+          APPEND LINES OF ls_request-objects TO e_t_objects.
+
+          CLEAR ls_request.
+
+        ENDLOOP.
+
+        SORT e_t_objects BY pgmid object obj_name.
+
+        DELETE ADJACENT DUPLICATES FROM e_t_objects COMPARING pgmid object obj_name.
 
       CATCH cx_cts_rest_api_exception ##NO_HANDLER. " CTS REST API Exception
 
@@ -141,8 +196,8 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-
-    DATA(l_add_object) = abap_true.
+    DATA(l_read) = abap_true.
+    DATA(l_add_object) = abap_false.
 
     CASE abap_true.
 
@@ -154,6 +209,18 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
         ).
 
         l_response = l_transport_request.
+
+      WHEN l_read.
+
+        me->read(
+          EXPORTING
+            i_transport_request = 'NPLK900129'
+          IMPORTING
+            e_s_header          = DATA(ls_header)
+            e_t_objects         = DATA(lt_objects)
+        ).
+
+        l_response = |{ ls_header-trkorr }  { ls_header-as4text } ( Number of objects: { lines( lt_objects ) })|.
 
       WHEN l_add_object.
 
