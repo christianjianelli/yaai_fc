@@ -46,6 +46,22 @@ CLASS ycl_aai_fc_message_class_tools DEFINITION
                 i_message_class   TYPE yde_aai_fc_message_class
       RETURNING VALUE(r_response) TYPE string.
 
+    METHODS set_translation
+      IMPORTING
+                i_message_class     TYPE yde_aai_fc_message_class
+                i_message_number    TYPE symsgno
+                i_transport_request TYPE yde_aai_fc_transport_request
+                i_language          TYPE spras
+                i_message_text      TYPE natxt
+      RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS get_translation
+      IMPORTING
+                i_message_class   TYPE yde_aai_fc_message_class
+                i_message_number  TYPE symsgno OPTIONAL
+                i_language        TYPE spras
+      RETURNING VALUE(r_response) TYPE string.
+
   PROTECTED SECTION.
 
   PRIVATE SECTION.
@@ -267,7 +283,7 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
       EXPORTING
         iv_name              = l_message_class
         iv_fetch_master_lang = abap_true
-        iv_fetch_all         = abap_true
+        iv_fetch_all         = abap_false
       IMPORTING
         rt_messages          = DATA(lt_messages)
     ).
@@ -287,6 +303,113 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD get_translation.
+
+    DATA(l_message_class) = i_message_class.
+
+    l_message_class = condense( to_upper( l_message_class ) ).
+
+    DATA(l_language) = i_language.
+
+    l_language = to_upper( l_language ).
+
+    DATA(lo_message_class_api) = NEW cl_adt_message_class_api( ).
+
+    lo_message_class_api->read(
+      EXPORTING
+        iv_name              = l_message_class
+        iv_language          = l_language
+        iv_fetch_master_lang = abap_false
+        iv_fetch_all         = abap_false
+      IMPORTING
+        rt_messages          = DATA(lt_messages)
+    ).
+
+    IF lt_messages IS INITIAL.
+      r_response = |The message class { l_message_class } has no messages in language { l_language }.|.
+      RETURN.
+    ENDIF.
+
+    r_response = |The message class { l_message_class } has the following messages in language { l_language }:|.
+
+    LOOP AT lt_messages ASSIGNING FIELD-SYMBOL(<ls_message>).
+
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - '{ <ls_message>-msgnr }' { <ls_message>-text }|.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD set_translation.
+
+    DATA: lt_message TYPE if_adt_mc_res_controller=>tt_message_api,
+          lt_e071    TYPE trwbo_t_e071.
+
+    DATA(l_message_class) = i_message_class.
+
+    l_message_class = condense( to_upper( l_message_class ) ).
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+      r_response = |The transport request { l_transport_request } is invalid.|.
+      RETURN.
+    ENDIF.
+
+    DATA(l_language) = i_language.
+
+    l_language = to_upper( l_language ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_message_class
+      INTO @DATA(ls_tadir).
+
+    lt_message = VALUE #( ( message_no = i_message_number
+                            text = i_message_text ) ).
+
+    DATA(lo_message_class_api) = NEW cl_adt_message_class_api( ).
+
+    DATA(l_success) = lo_message_class_api->update_message(
+                        iv_name              = CONV #( l_message_class )
+                        iv_language          = l_language
+                        it_message           = lt_message
+                        iv_transport_request = l_transport_request
+                        iv_package           = ls_tadir-devclass
+                      ).
+
+    IF l_success = abap_false.
+      r_response = |An error occurred while updating the message { i_message_number } in language { l_language }.|.
+      RETURN.
+    ENDIF.
+
+    lt_e071 = VALUE #( ( trkorr = l_transport_request
+                         pgmid = 'LANG'
+                         object = 'MESS'
+                         obj_name = |{ l_message_class }{ i_message_number }|
+                         lang = l_language ) ).
+
+    l_success = NEW ycl_aai_fc_cts_api( )->add_object(
+      EXPORTING
+        i_transport_request = l_transport_request
+      CHANGING
+        ch_t_e071           = lt_e071
+    ).
+
+    IF l_success = abap_true.
+      r_response = |Translation updated successfully. Message: { i_message_number }. Target language: { l_language }.|.
+    ELSE.
+      r_response = |Translation updated but it was not added to the transport request { l_transport_request }. Message: { i_message_number }. Target language: { l_language }.|.
+    ENDIF.
+
+  ENDMETHOD.
+
   METHOD _get_next_number.
 
     DATA l_msgnr TYPE symsgno.
@@ -299,7 +422,7 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
       EXPORTING
         iv_name              = i_message_class
         iv_fetch_master_lang = abap_true
-        iv_fetch_all         = abap_true
+        iv_fetch_all         = abap_false
       IMPORTING
         rt_messages          = DATA(lt_messages)
     ).
@@ -329,8 +452,11 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
     DATA(l_create) = abap_false.
     DATA(l_read_all_messages) = abap_false.
     DATA(l_add_message) = abap_false.
-    DATA(l_delete_message) = abap_true.
+    DATA(l_update_message) = abap_false.
+    DATA(l_delete_message) = abap_false.
     DATA(l_get_next) = abap_false.
+    DATA(l_get_translation) = abap_false.
+    DATA(l_set_translation) = abap_true.
 
     CASE abap_true.
 
@@ -338,19 +464,28 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
 
         l_response = me->create(
           EXPORTING
-            i_message_class     = 'ZMSG002'
+            i_message_class     = 'ZMSG001'
             i_description       = 'Testing ADT API'
             i_package           = 'Z001'
-            i_transport_request = 'NPLK900132'
+            i_transport_request = 'NPLK900137'
         ).
 
       WHEN l_add_message.
 
         l_response = me->add_message(
-                       i_message_class     = 'ZMSG002'
+                       i_message_class     = 'ZMSG001'
 *                       i_message_number    = '003'
                        i_message_text      = 'Testing ADT API 2'
-                       i_transport_request = 'NPLK900125'
+                       i_transport_request = 'NPLK900137'
+                     ).
+
+      WHEN l_update_message.
+
+        l_response = me->update_message(
+                       i_message_class     = 'ZMSG001'
+                       i_message_number    = '003'
+                       i_message_text      = 'Testing ADT API 2'
+                       i_transport_request = 'NPLK900137'
                      ).
 
       WHEN l_read_all_messages.
@@ -360,9 +495,9 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
       WHEN l_delete_message.
 
         l_response = me->delete_message(
-                       i_message_class     = 'ZMSG002'
+                       i_message_class     = 'ZMSG001'
                        i_message_number    = '002'
-                       i_transport_request = 'NPLK900125'
+                       i_transport_request = 'NPLK900137'
                      ).
 
       WHEN l_get_next.
@@ -370,6 +505,28 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
         DATA(l_msgno) = me->_get_next_number( 'ZMSG001' ).
 
         l_response = l_msgno.
+
+      WHEN l_get_translation.
+
+        l_response = me->get_translation( i_message_class = 'ZMSG001' i_language = 'P' ).
+
+      WHEN l_set_translation.
+
+        l_response = me->set_translation(
+                       i_message_class     = 'ZMSG001'
+                       i_message_number    = '001'
+                       i_language          = 'P'
+                       i_message_text      = 'Testando a API do ADT'
+                       i_transport_request = 'NPLK900137'
+                     ).
+
+*        l_response = me->set_translation(
+*                       i_message_class     = 'ZMSG001'
+*                       i_message_number    = '001'
+*                       i_language          = 'S'
+*                       i_message_text      = 'Pruebas de la API de ADT'
+*                       i_transport_request = 'NPLK900137'
+*                     ).
 
     ENDCASE.
 
