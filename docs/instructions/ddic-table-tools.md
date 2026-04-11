@@ -11,6 +11,10 @@ table-specific concepts such as the mandatory client field and key field definit
 - **DELETE** - Remove existing tables
 - **READ** - View table details
 - **SEARCH** - List/filter tables
+- **ACTIVATE** - Activate existing tables
+
+> ⚠️ Always warn the developer before executing a delete operation and require explicit
+> confirmation before proceeding.
 
 ## Field Type Selection Guidelines
 A table field can be typed in one of the following ways:

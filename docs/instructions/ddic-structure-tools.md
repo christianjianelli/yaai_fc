@@ -11,6 +11,10 @@ including structure-specific concepts such as field type binding and nested stru
 - **DELETE** - Remove existing structures
 - **READ** - View structure details
 - **SEARCH** - List/filter structures
+- **ACTIVATE** - Activate existing structures
+
+> ⚠️ Always warn the developer before executing a delete operation and require explicit
+> confirmation before proceeding.
 
 ## Field Type Selection Guidelines
 A structure field can be typed in one of the following ways:

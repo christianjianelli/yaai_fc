@@ -6,13 +6,16 @@ It covers supported operations and message class-specific concepts such as
 message numbering, text guidelines, and translation management.
 
 ## Supported Operations
-- **Create Message** - Create a new message in a message class
-- **Read Message** - Retrieve a specific message from a message class
-- **Update Message** - Update the text of an existing message in a message class
-- **Delete Message** - Delete a specific message from a message class
-- **Read All Messages** - Retrieve all messages from a message class
-- **Set Translation** - Set or update the translation of a message in a specific language
-- **Get Translation** - Retrieve the translation of a message for a specific language
+- **CREATE** - Create a new message class
+- **ADD_MESSAGE** - Create a new message in a message class
+- **READ_ALL_MESSAGES** - Retrieve all messages from a message class
+- **UPDATE_MESSAGE** - Update the text of an existing message in a message class
+- **DELETE_MESSAGE** - Delete a specific message from a message class
+- **SET_TRANSLATION** - Set or update the translation of a message in a specific language
+- **GET_TRANSLATION** - Retrieve the translation of a message for a specific language
+
+> ⚠️ Always warn the developer before executing a delete operation and require explicit
+> confirmation before proceeding.
 
 ## Message Class Concepts
 
@@ -48,8 +51,3 @@ Get Translation operations. When working with translations:
 - Always confirm the target language with the developer before setting a translation
 - The source language of the message class is typically English — do not overwrite
   source language texts using the Set Translation operation
-- When retrieving translations, confirm whether the developer wants a specific
-  message or all messages in the class for the target language
-
-> ⚠️ Always warn the developer before executing a delete operation and require explicit
-> confirmation before proceeding.

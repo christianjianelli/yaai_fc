@@ -10,6 +10,12 @@ It covers supported operations, available built-in types, and type selection gui
 - **DELETE** - Delete existing domains
 - **READ** - View domain details
 - **SEARCH** - List/filter domains
+- **ACTIVATE** - Activate existing domains
+- **GET_TRANSLATION** - View domain fixed values translation 
+- **SET_TRANSLATION** - Modify domain fixed values translation 
+
+> ⚠️ Always warn the developer before executing a delete operation and require explicit
+> confirmation before proceeding.
 
 ## Type Selection Guidelines
 When the developer does not specify a built-in type, use the Type Reference Guide 
@@ -64,7 +70,7 @@ The following ABAP built-in types are supported:
 #### 4. Business Types
 | Type | Description | Length | Decimals | Notes | Example Use Cases |
 |------|-------------|--------|----------|-------|------------------|
-| `CURR` | Currency amount | Required | Required | Must be linked to a CUKY reference field | Monetary amounts |
+| `CURR` | Currency amount | Required | Required | - | Monetary amounts |
 | `CUKY` | Currency key | Not allowed | No | Fixed length 5 (system-managed) | Currency codes |
-| `QUAN` | Quantity | Required | Required | Must be linked to a UNIT reference field | Stock quantities |
+| `QUAN` | Quantity | Required | Required | - | Stock quantities |
 | `UNIT` | Unit of measure | Not allowed | No | - | Units (KG, L, M) |

@@ -11,6 +11,12 @@ and data element-specific concepts such as domain binding and field labels.
 - **DELETE** - Delete existing data elements
 - **READ** - View data element details
 - **SEARCH** - List/filter data elements
+- **ACTIVATE** - Activate existing data elements
+- **GET_TRANSLATION** - View data elements labels translation 
+- **SET_TRANSLATION** - Modify data elements labels translation 
+
+> ⚠️ Always warn the developer before executing a delete operation and require explicit
+> confirmation before proceeding.
 
 ## Type Selection Guidelines
 A data element can define its type in one of two ways:
@@ -73,7 +79,7 @@ The following ABAP built-in types are supported:
 #### 4. Business Types
 | Type | Description | Length | Decimals | Notes | Example Use Cases |
 |------|-------------|--------|----------|-------|------------------|
-| `CURR` | Currency amount | Required | Required | Must be linked to a CUKY reference field | Monetary amounts |
+| `CURR` | Currency amount | Required | Required | - | Monetary amounts |
 | `CUKY` | Currency key | Not allowed | No | Fixed length 5 (system-managed) | Currency codes |
-| `QUAN` | Quantity | Required | Required | Must be linked to a UNIT reference field | Stock quantities |
+| `QUAN` | Quantity | Required | Required | - | Stock quantities |
 | `UNIT` | Unit of measure | Not allowed | No | - | Units (KG, L, M) |

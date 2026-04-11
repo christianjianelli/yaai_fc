@@ -11,6 +11,10 @@ such as line type binding and key definition.
 - **DELETE** - Delete existing table types
 - **READ** - View table type details
 - **SEARCH** - List/filter table types
+- **ACTIVATE** - Activate existing tables
+
+> ⚠️ Always warn the developer before executing a delete operation and require explicit
+> confirmation before proceeding.
 
 ## Line Type Selection Guidelines
 A table type defines the structure of its rows through a line type. The line type can
@@ -32,15 +36,9 @@ Always confirm your suggestion with the developer before proceeding.
 > that all referenced objects exist before creating or updating a table type. If a
 > dependency is missing, flag it and ask the developer how to proceed.
 
-## Table Type Key Definition
-A table type must have a key defined. The key determines how rows are accessed and
-whether duplicates are allowed. When the developer does not specify a key definition,
-flag it and ask how to proceed before planning the operation.
+## Table Type Initialization, Access and Key Definitions
+The table type tools support only the creation of table types with default settings. This means:
+- **Access**: Standard Tables (unsorted, allowing duplicates and no automatic sorting).
+- **Key Definition**: None (no primary key is set by default).
 
-The following key categories are typically available:
-- **Standard** — allows duplicate entries, accessed by index. Use for general-purpose
-  internal tables.
-- **Sorted** — entries are automatically sorted by key, no duplicates allowed unless
-  defined as non-unique. Use when sorted access or binary search is needed.
-- **Hashed** — entries are accessed by hash key, no duplicates allowed. Use for large
-  tables where frequent key-based lookups are needed.
+For custom access types (e.g., Sorted or Hashed) or key definitions, manual configuration in the ABAP Dictionary is required after creation.
