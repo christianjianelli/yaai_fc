@@ -1,4 +1,4 @@
-# yaai_fc - ABAP AI tools Function Calling Library
+# ABAP AI tools - Function Calling Library
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
