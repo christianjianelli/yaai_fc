@@ -6,7 +6,7 @@ A comprehensive function calling library designed specifically for AI agents to 
 
 ## Overview
 
-`yaai_fc` is part of the [ABAP AI tools](https://github.com/christianjianelli/yaai) ecosystem, providing a standardized set of function calling interfaces that enable AI assistants to perform ABAP development tasks programmatically. This library bridges the gap between natural language instructions and ABAP development operations, allowing AI agents to create, modify, and manage ABAP Dictionary objects and other ABAP development artifacts like message classes and translations, on the user's behalf.
+This library is part of the [ABAP AI tools](https://github.com/christianjianelli/yaai) ecosystem, providing a standardized set of function calling tools that enable AI assistants to perform ABAP development tasks programmatically. This library bridges the gap between natural language instructions and ABAP development operations, allowing AI agents to create, modify, and manage ABAP Dictionary objects and other ABAP development artifacts like message classes and translations, on the user's behalf.
 
 ## Key Features
 
