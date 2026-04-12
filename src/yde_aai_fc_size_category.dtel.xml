@@ -9,7 +9,7 @@
     <SCRLEN1>10</SCRLEN1>
     <SCRLEN2>20</SCRLEN2>
     <SCRLEN3>40</SCRLEN3>
-    <DDTEXT>Size Category</DDTEXT>
+    <DDTEXT>Size Category (0 to 9)</DDTEXT>
     <REPTEXT>Size Category</REPTEXT>
     <SCRTEXT_S>Size Categ</SCRTEXT_S>
     <SCRTEXT_M>Size Category</SCRTEXT_M>

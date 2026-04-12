@@ -87,7 +87,8 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
     DATA: ls_table         TYPE dd02v,
           ls_tech_settings TYPE dd09v.
 
-    DATA l_rc TYPE i.
+    DATA: l_rc            TYPE i,
+          l_size_category TYPE string.
 
     DATA(l_table_name) = i_table_name.
 
@@ -111,6 +112,39 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
 
     l_package = condense( to_upper( l_package ) ).
 
+    IF to_upper( i_delivery_class ) <> 'A' AND
+       to_upper( i_delivery_class ) <> 'C'.
+
+      r_response = |The delivery class { i_delivery_class } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    l_size_category = condense( i_size_category ).
+
+    FIND REGEX '^[0-9]$' IN l_size_category.
+
+    IF sy-subrc <> 0.
+
+      r_response = |The size category { i_size_category } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    DATA(l_data_class) = to_upper( i_data_class ).
+
+    IF l_data_class <> 'APPL0' AND
+       l_data_class <> 'APPL1' AND
+       l_data_class <> 'APPL2'.
+
+      r_response = |The data class { i_data_class } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
     DATA(lo_aai_fc_ddic_tools) = NEW ycl_aai_fc_ddic_tools_util( ).
 
     ls_table-tabname = l_table_name.
@@ -120,19 +154,19 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
 
     " Delivery Class
     ls_table-contflag = COND #( WHEN i_delivery_class IS NOT INITIAL
-                                THEN condense( to_upper( i_delivery_class ) )
+                                THEN to_upper( i_delivery_class )
                                 ELSE 'A' ).
 
     ls_tech_settings-tabname = l_table_name.
 
     " Size Category
-    ls_tech_settings-tabkat = COND #( WHEN i_size_category IS NOT INITIAL
-                                      THEN i_size_category
+    ls_tech_settings-tabkat = COND #( WHEN l_size_category IS NOT INITIAL
+                                      THEN l_size_category
                                       ELSE '0' ).
 
     " Data Class
-    ls_tech_settings-tabart = COND #( WHEN i_data_class IS NOT INITIAL
-                                      THEN to_upper( i_data_class )
+    ls_tech_settings-tabart = COND #( WHEN l_data_class IS NOT INITIAL
+                                      THEN l_data_class
                                       ELSE 'APPL1' ).
 
     LOOP AT i_t_components ASSIGNING FIELD-SYMBOL(<ls_component>).
@@ -454,8 +488,9 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
     DATA: ls_table         TYPE dd02v,
           ls_tech_settings TYPE dd09v.
 
-    DATA: l_state TYPE ddobjstate VALUE 'A',
-          l_rc    TYPE i.
+    DATA: l_state         TYPE ddobjstate VALUE 'A',
+          l_rc            TYPE i,
+          l_size_category TYPE string.
 
     DATA(l_table_name) = i_table_name.
 
@@ -518,12 +553,40 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
 
     " Size Category
     IF i_size_category IS NOT INITIAL.
-      ls_tech_settings-tabkat = i_size_category.
+
+      l_size_category = condense( i_size_category ).
+
+      FIND REGEX '^[0-9]$' IN l_size_category.
+
+      IF sy-subrc <> 0.
+
+        r_response = |The size category { i_size_category } is invalid.|.
+
+        RETURN.
+
+      ENDIF.
+
+      ls_tech_settings-tabkat = l_size_category.
+
     ENDIF.
 
     " Data Class
-    IF i_size_category IS NOT INITIAL.
+    IF i_data_class IS NOT INITIAL.
+
+      DATA(l_data_class) = to_upper( i_data_class ).
+
+      IF l_data_class <> 'APPL0' AND
+         l_data_class <> 'APPL1' AND
+         l_data_class <> 'APPL2'.
+
+        r_response = |The data class { i_data_class } is invalid.|.
+
+        RETURN.
+
+      ENDIF.
+
       ls_tech_settings-tabart = i_data_class.
+
     ENDIF.
 
     IF i_t_components IS NOT INITIAL.
@@ -828,21 +891,24 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
 
     DATA l_response TYPE string.
 
-    DATA(l_create) = abap_false.
+    DATA(l_create) = abap_true.
     DATA(l_read) = abap_false.
     DATA(l_search) = abap_false.
     DATA(l_update) = abap_false.
-    DATA(l_delete) = abap_true.
+    DATA(l_delete) = abap_false.
 
 
     CASE abap_true.
 
       WHEN l_create.
 
-        l_response = me->create( i_table_name = 'ZTBTEST1'
-                                 i_short_description = 'Test Table Create tool 1'
+        l_response = me->create( i_table_name = 'ZTBTEST2'
+                                 i_short_description = 'Test Table Create tool 2'
                                  i_transport_request = 'NPLK900133'
                                  i_package = 'Z001'
+                                 i_delivery_class = 'A'
+                                 i_data_class = 'APPL0'
+                                 i_size_category = '1'
                                  i_t_components = VALUE #( ( field_name = 'MANDT' key_flag = 'X' data_element = 'MANDT' )
                                                            ( field_name = 'FIELD1' key_flag = 'X' data_type = 'CHAR' length = '10' )
                                                            ( field_name = 'FIELD2' data_type = 'STRING' )
@@ -874,10 +940,10 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
                                                            ( field_name = 'CURCY' data_element = 'WAERS' ) ) ).
       WHEN l_delete.
 
-      l_response = me->delete(
-                     i_table_name        = 'ZTBTEST1'
-                     i_transport_request = 'NPLK900132'
-                   ).
+        l_response = me->delete(
+                       i_table_name        = 'ZTBTEST1'
+                       i_transport_request = 'NPLK900132'
+                     ).
 
     ENDCASE.
 
