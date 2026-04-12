@@ -17,6 +17,9 @@ and data element-specific concepts such as domain binding and field labels.
 
 > ⚠️ Always warn the developer before executing a delete operation and require explicit
 > confirmation before proceeding.
+> The Create and Update tools automatically activate the data elements. It is not necessary to
+> explicitly call the Activate tool after creating or updating a data element.
+> Use the Activate tool only when requested by the developer.
 
 ## Type Selection Guidelines
 A data element can define its type in one of two ways:

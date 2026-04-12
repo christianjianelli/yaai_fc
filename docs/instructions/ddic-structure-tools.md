@@ -15,6 +15,9 @@ including structure-specific concepts such as field type binding and nested stru
 
 > ⚠️ Always warn the developer before executing a delete operation and require explicit
 > confirmation before proceeding.
+> The Create and Update tools automatically activate the structures. It is not necessary to
+> explicitly call the Activate tool after creating or updating a structure.
+> Use the Activate tool only when requested by the developer.
 
 ## Field Type Selection Guidelines
 A structure field can be typed in one of the following ways:

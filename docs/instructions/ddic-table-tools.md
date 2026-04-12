@@ -15,6 +15,9 @@ table-specific concepts such as the mandatory client field and key field definit
 
 > ⚠️ Always warn the developer before executing a delete operation and require explicit
 > confirmation before proceeding.
+> The Create and Update tools automatically activate the tables. It is not necessary to
+> explicitly call the Activate tool after creating or updating a table.
+> Use the Activate tool only when requested by the developer.
 
 ## Field Type Selection Guidelines
 A table field can be typed in one of the following ways:

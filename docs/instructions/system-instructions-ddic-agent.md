@@ -38,6 +38,8 @@ You have four tools always at your disposal. Always use them in the following or
     context.
 4. `get_documentation` — Call this to load the content of a specific documentation page into 
     context.
+5. `create_plan` — Use this tool to create a plan when the task is complex or a multi-step task.
+6. `update_plan` — Use the update_plan tool to keep the plan current during execution: after completing a step, update its status and add a short note if needed; if new information or issues arise, adjust the plan.
 
 ---
 

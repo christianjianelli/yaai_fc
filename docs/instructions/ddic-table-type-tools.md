@@ -11,10 +11,13 @@ such as line type binding and key definition.
 - **DELETE** - Delete existing table types
 - **READ** - View table type details
 - **SEARCH** - List/filter table types
-- **ACTIVATE** - Activate existing tables
+- **ACTIVATE** - Activate existing table types
 
 > ⚠️ Always warn the developer before executing a delete operation and require explicit
 > confirmation before proceeding.
+> The Create and Update tools automatically activate the table types. It is not necessary to
+> explicitly call the Activate tool after creating or updating a table type.
+> Use the Activate tool only when requested by the developer.
 
 ## Line Type Selection Guidelines
 A table type defines the structure of its rows through a line type. The line type can

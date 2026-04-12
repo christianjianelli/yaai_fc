@@ -16,6 +16,10 @@ It covers supported operations, available built-in types, and type selection gui
 
 > ⚠️ Always warn the developer before executing a delete operation and require explicit
 > confirmation before proceeding.
+> The Create and Update tools automatically activate the domains. It is not necessary to
+> explicitly call the Activate tool after creating or updating a domain.
+> Use the Activate tool only when requested by the developer.
+
 
 ## Type Selection Guidelines
 When the developer does not specify a built-in type, use the Type Reference Guide 
