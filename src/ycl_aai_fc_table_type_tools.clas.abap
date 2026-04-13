@@ -577,6 +577,7 @@ CLASS ycl_aai_fc_table_type_tools IMPLEMENTATION.
       INTO TABLE @DATA(lt_tadir).
 
     IF sy-subrc <> 0.
+      r_response = |No table type found.|.
       RETURN.
     ENDIF.
 
@@ -629,6 +630,10 @@ CLASS ycl_aai_fc_table_type_tools IMPLEMENTATION.
       ENDCASE.
 
     ENDLOOP.
+
+    IF r_response IS INITIAL.
+      r_response = |No table type found.|.
+    ENDIF.
 
   ENDMETHOD.
 

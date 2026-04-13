@@ -133,7 +133,7 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
       INTO TABLE @DATA(lt_transport_requests).
 
     IF sy-subrc <> 0.
-      r_response = 'No transport requests found.'.
+      r_response = 'No transport request found.'.
       RETURN.
     ENDIF.
 
@@ -159,7 +159,7 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
     ENDLOOP.
 
     IF r_response IS INITIAL.
-      r_response = 'No transport requests found.'.
+      r_response = 'No transport request found.'.
       RETURN.
     ENDIF.
 

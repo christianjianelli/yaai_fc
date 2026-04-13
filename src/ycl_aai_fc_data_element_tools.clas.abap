@@ -363,6 +363,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       INTO TABLE @DATA(lt_tadir).
 
     IF sy-subrc <> 0.
+      r_response = |No data element found.|.
       RETURN.
     ENDIF.
 
@@ -413,6 +414,10 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       ENDIF.
 
     ENDLOOP.
+
+    IF r_response IS INITIAL.
+      r_response = |No data element found.|.
+    ENDIF.
 
   ENDMETHOD.
 

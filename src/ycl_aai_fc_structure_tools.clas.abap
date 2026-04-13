@@ -361,6 +361,7 @@ CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
       INTO TABLE @DATA(lt_tadir).
 
     IF sy-subrc <> 0.
+      r_response = |No structure found.|.
       RETURN.
     ENDIF.
 
@@ -400,6 +401,10 @@ CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
       r_response = |{ r_response }Description: { ls_dd01v-ddtext }{ cl_abap_char_utilities=>newline }|.
 
     ENDLOOP.
+
+    IF r_response IS INITIAL.
+      r_response = |No structure found.|.
+    ENDIF.
 
   ENDMETHOD.
 
