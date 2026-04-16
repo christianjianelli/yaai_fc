@@ -44,6 +44,21 @@ CLASS ycl_aai_fc_cts_api DEFINITION
         e_task              TYPE trkorr
         e_inserted          TYPE abap_bool.
 
+    METHODS sort_and_compress
+      IMPORTING
+                i_transport_request TYPE trkorr
+      RETURNING VALUE(r_success)    TYPE abap_bool.
+
+    METHODS release
+      IMPORTING
+        i_transport_request    TYPE trkorr
+        i_test_mode            TYPE abap_bool DEFAULT abap_false
+        i_ignore_locks         TYPE abap_bool DEFAULT abap_true
+        i_ignore_objects_check TYPE abap_bool DEFAULT abap_true
+      EXPORTING
+        e_released             TYPE abap_bool
+        e_error                TYPE string.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -191,13 +206,111 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD sort_and_compress.
+
+    r_success = abap_false.
+
+    TRY.
+
+        NEW cl_cts_rest_api_impl( )->if_cts_rest_api~sort_and_compress(
+          EXPORTING
+            iv_trkorr      = i_transport_request
+          IMPORTING
+            es_request     = DATA(ls_request)
+        ).
+
+        r_success = abap_true.
+
+      CATCH cx_cts_rest_api_exception ##NO_HANDLER. " CTS REST API Exception
+
+    ENDTRY.
+
+  ENDMETHOD.
+
+  METHOD release.
+
+    DATA lo_ex_cts_rest_api TYPE REF TO cx_cts_rest_api_exception.
+
+    DATA l_ignorable_errors TYPE abap_bool.
+
+    CLEAR e_error.
+
+    e_released = abap_false.
+
+    me->sort_and_compress( i_transport_request ).
+
+    TRY.
+
+        NEW cl_cts_rest_api_impl( )->if_cts_rest_api~release(
+          EXPORTING
+            iv_trkorr               = i_transport_request
+            iv_simulation           = i_test_mode
+            iv_ignore_locks         = i_ignore_locks
+            iv_ignore_objects_check = i_ignore_objects_check
+          IMPORTING
+            et_messages   = DATA(lt_messages)
+        ).
+
+        e_released = abap_true.
+
+      CATCH cx_cts_rest_api_release_fail   INTO lo_ex_cts_rest_api. " Error when releasing request or task
+      CATCH cx_cts_rest_api_obj_lock_displ INTO lo_ex_cts_rest_api. " Ignorable errors when attempting to lock objects
+
+        l_ignorable_errors = abap_true.
+
+      CATCH cx_cts_rest_api_obj_lock_error INTO lo_ex_cts_rest_api. " Lock error
+      CATCH cx_cts_rest_api_inac_obj_error INTO lo_ex_cts_rest_api. " Inactive object error
+      CATCH cx_cts_rest_api_crit_obj_error INTO lo_ex_cts_rest_api. " Critical object check error
+      CATCH cx_cts_rest_api_disp_obj_error INTO lo_ex_cts_rest_api. " Non-critical object check error
+      CATCH cx_cts_rest_api_req_cons_error INTO lo_ex_cts_rest_api. " Request is not consistent
+      CATCH cx_cts_rest_api_obchk_obsolete INTO lo_ex_cts_rest_api. " Object check is not up-to-date
+      CATCH cx_cts_rest_api_exception      INTO lo_ex_cts_rest_api. " CTS REST API Exception
+
+    ENDTRY.
+
+    IF lo_ex_cts_rest_api IS BOUND.
+
+      IF l_ignorable_errors = abap_true.
+
+        e_released = abap_true.
+
+        RETURN.
+
+      ENDIF.
+
+      DATA(l_error) = lo_ex_cts_rest_api->get_text( ).
+
+      e_error = l_error.
+
+      LOOP AT lt_messages ASSIGNING FIELD-SYMBOL(<ls_message>).
+
+        MESSAGE ID <ls_message>-msgid
+          TYPE <ls_message>-msgty
+          NUMBER <ls_message>-msgno
+          WITH <ls_message>-msgv1 <ls_message>-msgv2 <ls_message>-msgv3 <ls_message>-msgv4
+          INTO DATA(l_message).
+
+        IF l_message <> l_error.
+
+          e_error = |{ e_error }{ cl_abap_char_utilities=>newline }{ l_message }|.
+
+        ENDIF.
+
+      ENDLOOP.
+
+    ENDIF.
+
+  ENDMETHOD.
+
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_true.
+    DATA(l_read) = abap_false.
     DATA(l_add_object) = abap_false.
+    DATA(l_sort_and_compress) = abap_false.
+    DATA(l_release)  = abap_true.
 
     CASE abap_true.
 
@@ -246,6 +359,34 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
           l_response = 'Object was added to transport request'.
         ELSE.
           l_response = 'Object was NOT added to transport request'.
+        ENDIF.
+
+      WHEN l_sort_and_compress.
+
+        l_success = me->sort_and_compress( 'NPLK900126' ).
+
+        IF l_success = abap_true.
+          l_response = 'Transport request/task sorted and compressed.'.
+        ELSE.
+          l_response = 'Transport request/task sort and compress failed.'.
+        ENDIF.
+
+      WHEN l_release.
+
+        me->release(
+          EXPORTING
+            i_transport_request = 'NPLK900120'
+            i_test_mode = abap_false
+          IMPORTING
+            e_released = l_success
+            e_error = DATA(l_error)
+        ).
+
+        IF l_success = abap_true.
+          l_response = 'Transport request/task NPLK900120 released.'.
+        ELSE.
+          l_response = 'Transport request/task NPLK900120 release failed.'.
+          l_response = |{ l_response }{ cl_abap_char_utilities=>newline }{ l_error }|.
         ENDIF.
 
     ENDCASE.
