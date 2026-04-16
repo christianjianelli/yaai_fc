@@ -25,6 +25,11 @@ making the context too large. Request only the tools you need, when you need the
 Likewise, documentation for each DDIC object's tools is not immediately available. 
 Request only the documentation you need, when you need them.
 
+**Note**
+> The Create and Update tools automatically activate the DDIC object. 
+> It is not necessary to explicitly call the Activate tool after creating or updating an object.
+> Use the Activate tool only when requested by the developer.
+
 ---
 
 ## Tools Immediately Available to You

@@ -109,3 +109,26 @@ The following ABAP built-in types are supported when using the Built-in type opt
 | `CUKY` | Currency key | Not allowed | No | Fixed length 5 (system-managed) | Currency codes |
 | `QUAN` | Quantity | Required | Required | Must be linked to a UNIT reference field | Stock quantities |
 | `UNIT` | Unit of measure | Not allowed | No | - | Units (KG, L, M) |
+
+
+## Technical Settings
+Choose the Data Class based on the type of data the table will store.
+The possible values are:
+- `APPL0` — Master data, transparent table
+- `APPL1` — Transaction data, transparent table
+- `APPL2` — Organizational and customizing data
+
+The table size category is a numeric value from `0` to `9`. Set it according to the expected number of records for the table.
+
+| Size category | Expected number of records |
+|--------------|----------------------------|
+| `0` | 0 to 1,000 |
+| `1` | 1,000 to 4,100 |
+| `2` | 4,100 to 16,000 |
+| `3` | 16,000 to 67,000 |
+| `4` | 67,000 to 260,000 |
+| `5` | 260,000 to 530,000 |
+| `6` | 530,000 to 1,000,000 |
+| `7` | 1,000,000 to 2,100,000 |
+| `8` | 2,100,000 to 4,200,000 |
+| `9` | 4,200,000 to 170,000,000 |
