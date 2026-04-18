@@ -26,6 +26,11 @@ CLASS ycl_aai_fc_transport_tools DEFINITION
                 i_description     TYPE as4text OPTIONAL
       RETURNING VALUE(r_response) TYPE string.
 
+    METHODS release
+      IMPORTING
+                i_transport_request TYPE yde_aai_fc_transport_request
+      RETURNING VALUE(r_response)   TYPE string.
+
   PROTECTED SECTION.
 
   PRIVATE SECTION.
@@ -164,6 +169,37 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
     ENDIF.
 
     r_response = 'Here is the list of the modifiable transport requests found:' && r_response.
+
+  ENDMETHOD.
+
+  METHOD release.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+      r_response = |The transport request { l_transport_request } is invalid.|.
+      RETURN.
+    ENDIF.
+
+    lo_cts_api->release(
+      EXPORTING
+        i_transport_request    = l_transport_request
+        i_test_mode            = abap_false
+        i_ignore_locks         = abap_true
+      IMPORTING
+        e_released             = DATA(l_released)
+        e_error                = DATA(l_error)
+    ).
+
+    IF l_released = abap_true.
+      r_response = |Transport request { l_transport_request } released.|.
+    ELSE.
+      r_response = |Transport request { l_transport_request } not released. Error: { l_error }.|.
+    ENDIF.
 
   ENDMETHOD.
 

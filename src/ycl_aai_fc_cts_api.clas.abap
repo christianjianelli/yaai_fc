@@ -18,6 +18,7 @@ CLASS ycl_aai_fc_cts_api DEFINITION
         i_transport_request TYPE trkorr
       EXPORTING
         e_s_header          TYPE trwbo_request_header
+        e_t_tasks           TYPE trwbo_request_headers
         e_t_objects         TYPE trwbo_t_e071.
 
     METHODS add_object
@@ -54,9 +55,9 @@ CLASS ycl_aai_fc_cts_api DEFINITION
         i_transport_request    TYPE trkorr
         i_test_mode            TYPE abap_bool DEFAULT abap_false
         i_ignore_locks         TYPE abap_bool DEFAULT abap_true
-        i_ignore_objects_check TYPE abap_bool DEFAULT abap_true
       EXPORTING
         e_released             TYPE abap_bool
+        e_task_released        TYPE abap_bool
         e_error                TYPE string.
 
   PROTECTED SECTION.
@@ -98,35 +99,39 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
           EXPORTING
             iv_trkorr   = i_transport_request
           IMPORTING
-            et_requests = DATA(lt_requests)
+            et_requests = e_t_tasks
         ).
 
-        LOOP AT lt_requests ASSIGNING FIELD-SYMBOL(<ls_request>).
+        IF e_t_objects IS REQUESTED.
 
-          ls_request-h-trkorr = <ls_request>-trkorr.
+          LOOP AT e_t_tasks ASSIGNING FIELD-SYMBOL(<ls_request>).
 
-          lo_cts_api->if_cts_rest_api~get_request_data(
-            EXPORTING
-              iv_read_headers    = abap_true
-              iv_read_descr      = abap_true
-              iv_read_objs       = abap_true
-            CHANGING
-              cs_request         = ls_request
-          ).
+            ls_request-h-trkorr = <ls_request>-trkorr.
 
-          IF <ls_request>-trkorr = i_transport_request.
-            e_s_header = ls_request-h.
-          ENDIF.
+            lo_cts_api->if_cts_rest_api~get_request_data(
+              EXPORTING
+                iv_read_headers    = abap_true
+                iv_read_descr      = abap_true
+                iv_read_objs       = abap_true
+              CHANGING
+                cs_request         = ls_request
+            ).
 
-          APPEND LINES OF ls_request-objects TO e_t_objects.
+            IF <ls_request>-trkorr = i_transport_request.
+              e_s_header = ls_request-h.
+            ENDIF.
 
-          CLEAR ls_request.
+            APPEND LINES OF ls_request-objects TO e_t_objects.
 
-        ENDLOOP.
+            CLEAR ls_request.
 
-        SORT e_t_objects BY pgmid object obj_name.
+          ENDLOOP.
 
-        DELETE ADJACENT DUPLICATES FROM e_t_objects COMPARING pgmid object obj_name.
+          SORT e_t_objects BY pgmid object obj_name.
+
+          DELETE ADJACENT DUPLICATES FROM e_t_objects COMPARING pgmid object obj_name.
+
+        ENDIF.
 
       CATCH cx_cts_rest_api_exception ##NO_HANDLER. " CTS REST API Exception
 
@@ -231,56 +236,74 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
 
     DATA lo_ex_cts_rest_api TYPE REF TO cx_cts_rest_api_exception.
 
-    DATA l_ignorable_errors TYPE abap_bool.
-
     CLEAR e_error.
 
     e_released = abap_false.
+    e_task_released = abap_false.
 
-    me->sort_and_compress( i_transport_request ).
+    me->read(
+      EXPORTING
+        i_transport_request = i_transport_request
+      IMPORTING
+        e_s_header = DATA(ls_header)
+        e_t_tasks  = DATA(lt_tasks)
+    ).
 
-    TRY.
+    SORT lt_tasks DESCENDING. " Release tasks first
 
-        NEW cl_cts_rest_api_impl( )->if_cts_rest_api~release(
-          EXPORTING
-            iv_trkorr               = i_transport_request
-            iv_simulation           = i_test_mode
-            iv_ignore_locks         = i_ignore_locks
-            iv_ignore_objects_check = i_ignore_objects_check
-          IMPORTING
-            et_messages   = DATA(lt_messages)
-        ).
+    LOOP AT lt_tasks ASSIGNING FIELD-SYMBOL(<ls_task>).
+      me->sort_and_compress( <ls_task>-trkorr ).
+    ENDLOOP.
 
-        e_released = abap_true.
+    LOOP AT lt_tasks ASSIGNING <ls_task>.
 
-      CATCH cx_cts_rest_api_release_fail   INTO lo_ex_cts_rest_api. " Error when releasing request or task
-      CATCH cx_cts_rest_api_obj_lock_displ INTO lo_ex_cts_rest_api. " Ignorable errors when attempting to lock objects
+      TRY.
 
-        l_ignorable_errors = abap_true.
+          NEW cl_cts_rest_api_impl( )->if_cts_rest_api~release(
+            EXPORTING
+              iv_trkorr               = <ls_task>-trkorr
+              iv_simulation           = i_test_mode
+              iv_ignore_locks         = i_ignore_locks
+*              iv_ignore_objects_check = i_ignore_objects_check
+            IMPORTING
+              et_messages   = DATA(lt_messages)
+          ).
 
-      CATCH cx_cts_rest_api_obj_lock_error INTO lo_ex_cts_rest_api. " Lock error
-      CATCH cx_cts_rest_api_inac_obj_error INTO lo_ex_cts_rest_api. " Inactive object error
-      CATCH cx_cts_rest_api_crit_obj_error INTO lo_ex_cts_rest_api. " Critical object check error
-      CATCH cx_cts_rest_api_disp_obj_error INTO lo_ex_cts_rest_api. " Non-critical object check error
-      CATCH cx_cts_rest_api_req_cons_error INTO lo_ex_cts_rest_api. " Request is not consistent
-      CATCH cx_cts_rest_api_obchk_obsolete INTO lo_ex_cts_rest_api. " Object check is not up-to-date
-      CATCH cx_cts_rest_api_exception      INTO lo_ex_cts_rest_api. " CTS REST API Exception
+          e_released = abap_true.
 
-    ENDTRY.
+          <ls_task>-trstatus = abap_true.
+
+        CATCH cx_cts_rest_api_release_fail    " Error when releasing request or task
+              cx_cts_rest_api_obj_lock_displ  " Ignorable errors when attempting to lock objects
+              cx_cts_rest_api_obj_lock_error  " Lock error
+              cx_cts_rest_api_inac_obj_error  " Inactive object error
+              cx_cts_rest_api_crit_obj_error  " Critical object check error
+              cx_cts_rest_api_disp_obj_error  " Non-critical object check error
+              cx_cts_rest_api_req_cons_error  " Request is not consistent
+              cx_cts_rest_api_obchk_obsolete  " Object check is not up-to-date
+              cx_cts_rest_api_exception       " CTS REST API Exception
+            INTO lo_ex_cts_rest_api.
+
+          e_released = abap_false.
+
+          EXIT.
+
+      ENDTRY.
+
+    ENDLOOP.
 
     IF lo_ex_cts_rest_api IS BOUND.
-
-      IF l_ignorable_errors = abap_true.
-
-        e_released = abap_true.
-
-        RETURN.
-
-      ENDIF.
 
       DATA(l_error) = lo_ex_cts_rest_api->get_text( ).
 
       e_error = l_error.
+
+      READ TABLE lt_tasks TRANSPORTING NO FIELDS
+        WITH KEY trstatus = abap_true.
+
+      IF sy-subrc = 0.
+        e_task_released = abap_true.
+      ENDIF.
 
       LOOP AT lt_messages ASSIGNING FIELD-SYMBOL(<ls_message>).
 
@@ -375,7 +398,7 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
 
         me->release(
           EXPORTING
-            i_transport_request = 'NPLK900120'
+            i_transport_request = 'NPLK900144'
             i_test_mode = abap_false
           IMPORTING
             e_released = l_success
@@ -383,9 +406,9 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
         ).
 
         IF l_success = abap_true.
-          l_response = 'Transport request/task NPLK900120 released.'.
+          l_response = 'Transport request/task NPLK900144 released.'.
         ELSE.
-          l_response = 'Transport request/task NPLK900120 release failed.'.
+          l_response = 'Transport request/task NPLK900144 release failed.'.
           l_response = |{ l_response }{ cl_abap_char_utilities=>newline }{ l_error }|.
         ENDIF.
 
