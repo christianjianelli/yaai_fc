@@ -51,6 +51,17 @@ CLASS ycl_aai_fc_email_tools IMPLEMENTATION.
                                                         i_text = lt_body
                                                         i_subject = l_subject ).
 
+        LOOP AT i_t_attachments ASSIGNING FIELD-SYMBOL(<ls_attachment>).
+
+          DATA(l_file_content_bin) = cl_abap_codepage=>convert_to( source = <ls_attachment>-file_content ).
+
+          lo_document->add_attachment( i_attachment_type    = space
+                                       i_attachment_subject = CONV #( <ls_attachment>-filename )
+                                       i_att_content_hex    = cl_document_bcs=>xstring_to_solix( l_file_content_bin )
+                                       i_attachment_size    = CONV #( xstrlen( l_file_content_bin ) ) ).
+
+        ENDLOOP.
+
         lo_send_request->set_document( lo_document ).
 
         lo_recipient = cl_cam_address_bcs=>create_internet_address( CONV #( i_recipient ) ).
@@ -76,6 +87,17 @@ CLASS ycl_aai_fc_email_tools IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD if_oo_adt_classrun~main.
+
+    DATA(l_response) = me->send_mail(
+                         i_recipient     = '...'
+*                         i_cc            =
+                         i_subject       = 'Test'
+                         i_body          = 'Test'
+                         i_type          = 'RAW'
+                         i_t_attachments = VALUE #( ( filename = 'doc.md' file_content = '# markdown content' file_type = 'ASC' ) )
+                       ).
+
+    out->write( l_response ).
 
   ENDMETHOD.
 

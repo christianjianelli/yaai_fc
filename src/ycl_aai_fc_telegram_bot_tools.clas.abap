@@ -1,0 +1,16 @@
+CLASS ycl_aai_fc_telegram_bot_tools DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS ycl_aai_fc_telegram_bot_tools IMPLEMENTATION.
+
+
+ENDCLASS.
