@@ -215,6 +215,42 @@ CLASS ycl_aai_fc_tools_initial_setup IMPLEMENTATION.
                                               method_name = 'SEARCH'
                                               description = 'Search for transport requests, optionally filtered by description.' )
 
+                                            ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
+                                              method_name = 'CREATE_REPORT_TRANSACTION'
+                                              description = 'Create a new ABAP report transaction with the specified parameters.' )
+
+                                            ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
+                                              method_name = 'CREATE_DIALOG_TRANSACTION'
+                                              description = 'Create a new ABAP dialog transaction with the specified parameters.' )
+
+                                            ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
+                                              method_name = 'READ'
+                                              description = 'Retrieve the details of an existing ABAP transaction.' )
+
+                                            ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
+                                              method_name = 'SEARCH'
+                                              description = 'Search for ABAP transaction in the specified package, optionally filtered by name or description.' )
+
+                                            ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
+                                              method_name = 'DELETE'
+                                              description = 'Delete an existing ABAP transaction.' )
+
+                                            ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
+                                              method_name = 'SET_TRANSLATION'
+                                              description = 'Set the translation for an existing ABAP transaction in the specified language.' )
+
+                                            ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
+                                              method_name = 'GET_TRANSLATION'
+                                              description = 'Get the translation for an existing ABAP transaction in the specified language.' )
+
+                                            ( class_name = 'YCL_AAI_FC_EMAIL_TOOLS'
+                                              method_name = 'SEND_MAIL'
+                                              description = 'Send email.' )
+
+                                            ( class_name = 'YCL_AAI_FC_RUNTIME_ERROR_TOOLS'
+                                              method_name = 'GET_RUNTIME_ERRORS'
+                                              description = 'Get ABAP runtime errors (ST22).' )
+
                                                 ) ) ACCEPTING DUPLICATE KEYS.
 
     out->write( |{ sy-dbcnt } tools inserted into table yaai_tool.| ).

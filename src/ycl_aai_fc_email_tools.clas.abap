@@ -53,7 +53,7 @@ CLASS ycl_aai_fc_email_tools IMPLEMENTATION.
 
         LOOP AT i_t_attachments ASSIGNING FIELD-SYMBOL(<ls_attachment>).
 
-          DATA(l_file_content_bin) = cl_abap_codepage=>convert_to( source = <ls_attachment>-file_content ).
+          DATA(l_file_content_bin) = cl_http_utility=>decode_x_base64( encoded = <ls_attachment>-file_content ).
 
           lo_document->add_attachment( i_attachment_type    = space
                                        i_attachment_subject = CONV #( <ls_attachment>-filename )
@@ -88,13 +88,15 @@ CLASS ycl_aai_fc_email_tools IMPLEMENTATION.
 
   METHOD if_oo_adt_classrun~main.
 
+    DATA l_recipient TYPE string.
+
     DATA(l_response) = me->send_mail(
-                         i_recipient     = '...'
+                         i_recipient     = l_recipient
 *                         i_cc            =
                          i_subject       = 'Test'
                          i_body          = 'Test'
                          i_type          = 'RAW'
-                         i_t_attachments = VALUE #( ( filename = 'doc.md' file_content = '# markdown content' file_type = 'ASC' ) )
+                         i_t_attachments = VALUE #( ( filename = 'doc.md' file_content = 'IyBtYXJrZG93biBjb250ZW50' ) )
                        ).
 
     out->write( l_response ).
