@@ -28,7 +28,9 @@ CLASS ycl_aai_fc_runtime_error_tools DEFINITION
 
     METHODS get_runtime_errors
       IMPORTING
-                i_date            TYPE dats
+                i_date            TYPE yde_aai_fc_date
+                i_time_from       TYPE yde_aai_fc_time OPTIONAL
+                i_time_to         TYPE yde_aai_fc_time OPTIONAL
       RETURNING VALUE(r_response) TYPE string.
 
   PROTECTED SECTION.
@@ -39,7 +41,9 @@ CLASS ycl_aai_fc_runtime_error_tools DEFINITION
 
     METHODS _get_runtime_errors
       IMPORTING
-        i_date             TYPE dats
+        i_date             TYPE yde_aai_fc_date
+        i_time_from        TYPE yde_aai_fc_time OPTIONAL
+        i_time_to          TYPE yde_aai_fc_time OPTIONAL
       EXPORTING
         e_t_runtime_errors TYPE ty_dumpinfo_t.
 
@@ -133,14 +137,24 @@ CLASS ycl_aai_fc_runtime_error_tools IMPLEMENTATION.
 
   METHOD _get_runtime_errors.
 
-    DATA: lt_ft TYPE rsdump_ft_it.
+    DATA: lt_ft        TYPE rsdump_ft_it,
+          lt_rng_uzeit TYPE RANGE OF tims.
 
     FREE e_t_runtime_errors.
+
+    IF i_time_from IS NOT INITIAL AND i_time_to IS INITIAL.
+      APPEND VALUE #( sign = 'I' option = 'GE' low = i_time_from ) TO lt_rng_uzeit.
+    ENDIF.
+
+    IF i_time_from IS NOT INITIAL AND i_time_to IS NOT INITIAL.
+      APPEND VALUE #( sign = 'I' option = 'BT' low = i_time_from high = i_time_to ) TO lt_rng_uzeit.
+    ENDIF.
 
     SELECT datum, uzeit, ahost, uname, mandt, modno, seqno
       FROM snap
       INTO TABLE @DATA(lt_snap)
       WHERE datum = @i_date
+      AND uzeit IN @lt_rng_uzeit
       AND mandt = @sy-mandt
       AND seqno = '000'.
 
@@ -377,7 +391,11 @@ CLASS ycl_aai_fc_runtime_error_tools IMPLEMENTATION.
 
       WHEN l_get_runtime_errors.
 
-        l_response = me->get_runtime_errors( i_date = '20260420' ).
+        l_response = me->get_runtime_errors(
+                       i_date = '20260513'
+                       i_time_from = '070000'
+                       i_time_to   = '080000'
+                     ).
 
     ENDCASE.
 
