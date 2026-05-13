@@ -1,6 +1,6 @@
-# ABAP AI tools - Function Calling Library
+[![License](https://img.shields.io/github/license/christianjianelli/yaai_fc)](https://github.com/christianjianelli/yaai_fc/blob/main/LICENSE)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+# ABAP AI tools - Function Calling Library
 
 A comprehensive function calling library designed specifically for AI agents to interact with ABAP Dictionary (DDIC) objects and related development artifacts in SAP ABAP environments.
 
