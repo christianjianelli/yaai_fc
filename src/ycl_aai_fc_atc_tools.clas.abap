@@ -7,6 +7,8 @@ CLASS ycl_aai_fc_atc_tools DEFINITION
 
     INTERFACES if_oo_adt_classrun.
 
+    CONSTANTS c_error TYPE string VALUE 'Error while creating the ATC Run'.
+
     METHODS run
       IMPORTING
                 i_transport_request TYPE yde_aai_fc_transport_request
@@ -40,9 +42,12 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
           l_msg                 TYPE string,
           l_description(128)    TYPE c.
 
-    DATA: l_transport_request TYPE trkorr,
-          l_check_variant     TYPE sci_chkv VALUE 'DEFAULT' ##NO_TEXT.
+    DATA: l_transport_request   TYPE trkorr,
+          l_check_variant       TYPE sci_chkv VALUE 'DEFAULT' ##NO_TEXT,
+          l_finding_description TYPE string.
 
+
+    FREE r_response.
 
     l_transport_request = to_upper( condense( i_transport_request ) ).
 
@@ -61,6 +66,8 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
             cx_satc_invalid_argument
             cx_satc_failure INTO lo_exception.
 
+        r_response = c_error.
+
         RETURN.
 
     ENDTRY.
@@ -70,6 +77,8 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
         lo_variant = lo_factory->get_repository( )->load_ci_check_variant( i_name = l_check_variant ).
 
       CATCH cx_satc_not_found INTO lo_exception.
+
+        r_response = c_error.
 
         RETURN.
 
@@ -93,12 +102,13 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
 
       CATCH cx_satc_failure INTO lo_exception.
 
+        r_response = c_error.
+
         RETURN.
 
     ENDTRY.
 
-    ls_ext_field_list-package_name = abap_true.
-    ls_ext_field_list-exc_validity = abap_true.
+    ls_ext_field_list-description_lines = abap_true.
 
     TRY.
 
@@ -111,11 +121,25 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
 
       CATCH cx_satc_failure INTO lo_exception.
 
+        r_response = c_error.
+
         RETURN.
 
     ENDTRY.
 
+    IF lt_findings IS INITIAL.
+
+      r_response = |ATC Run executed for transport request `{ l_transport_request }`. No errors or warnings found.|.
+
+      RETURN.
+
+    ENDIF.
+
+    r_response = 'Object Type;Object Name;Author;Type;Description;Sub Object Type; Sub Object Name;Line;Column'.
+
     LOOP AT lt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+
+      DATA(l_index) = sy-tabix.
 
       IF <ls_finding>-kind = 'N'.
         CONTINUE.
@@ -134,15 +158,25 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
         r_response = r_response && 'Unknown;'.
       ENDIF.
 
-      cl_bcs_convert=>xstring_to_string(
-        EXPORTING
-          iv_xstr   = <ls_finding>-detail
-          iv_cp     = 1100                 " SAP character set identification
-        RECEIVING
-          rv_string = DATA(l_detail)
-      ).
+      READ TABLE lt_findings_extension ASSIGNING FIELD-SYMBOL(<ls_findings_extension>) INDEX l_index.
 
-      r_response = r_response && l_detail && ';'.
+      IF sy-subrc = 0.
+
+        LOOP AT <ls_findings_extension>-description_lines ASSIGNING FIELD-SYMBOL(<ls_description_line>).
+
+          IF l_finding_description IS INITIAL.
+            l_finding_description = <ls_description_line>.
+          ELSE.
+            l_finding_description = |{ l_finding_description } { <ls_description_line> }|.
+          ENDIF.
+
+        ENDLOOP.
+
+      ENDIF.
+
+      r_response = r_response && l_finding_description && ';'.
+
+      FREE l_finding_description.
 
       IF <ls_finding>-objtype = 'CLAS' AND <ls_finding>-sobjname IS NOT INITIAL.
 
@@ -162,6 +196,10 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
           SPLIT l_method_key AT space INTO DATA(l_class) <ls_finding>-sobjname.
 
           <ls_finding>-sobjname = condense( <ls_finding>-sobjname ).
+
+          <ls_finding>-sobjtype = 'METHOD'.
+
+          CLEAR l_method_key.
 
         ENDIF.
 
@@ -186,7 +224,7 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
 
     DATA l_transport_request TYPE trkorr.
 
-    DATA l_message TYPE string.
+    DATA l_finding_description TYPE string.
 
     l_transport_request = to_upper( condense( i_transport_request ) ).
 
@@ -228,6 +266,8 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    r_response = 'Object Type;Object Name;Author;Type;Description;Sub Object Type; Sub Object Name;Line;Column'.
+
     LOOP AT lt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
 
       DATA(l_index) = sy-tabix.
@@ -255,19 +295,19 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
 
         LOOP AT <ls_findings_ext>-description_lines ASSIGNING FIELD-SYMBOL(<ls_description_line>).
 
-          IF l_message IS INITIAL.
-            l_message = <ls_description_line>.
+          IF l_finding_description IS INITIAL.
+            l_finding_description = <ls_description_line>.
           ELSE.
-            l_message = |{ l_message } { <ls_description_line> }|.
+            l_finding_description = |{ l_finding_description } { <ls_description_line> }|.
           ENDIF.
 
         ENDLOOP.
 
       ENDIF.
 
-      r_response = r_response && l_message && ';'.
+      r_response = r_response && l_finding_description && ';'.
 
-      FREE l_message.
+      FREE l_finding_description.
 
       IF <ls_finding>-objtype = 'CLAS' AND <ls_finding>-sobjname IS NOT INITIAL.
 
@@ -309,8 +349,8 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
 
     DATA l_response TYPE string.
 
-    DATA(l_run) = abap_false.
-    DATA(l_get_results) = abap_true.
+    DATA(l_run) = abap_true.
+    DATA(l_get_results) = abap_false.
 
     CASE abap_true.
 
