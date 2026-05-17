@@ -251,6 +251,30 @@ CLASS ycl_aai_fc_tools_initial_setup IMPLEMENTATION.
                                               method_name = 'GET_RUNTIME_ERRORS'
                                               description = 'Get ABAP runtime errors (ST22).' )
 
+                                            ( class_name = 'YCL_AAI_FC_CI_TOOLS'
+                                              method_name = 'RUN_INSPECTION'
+                                              description = 'Executes a Code Inspector inspection for all objects included in the given transport request and returns the inspection results.' )
+
+                                            ( class_name = 'YCL_AAI_FC_CI_TOOLS'
+                                              method_name = 'RUN_INSPECTION_VIA_JOB'
+                                              description = 'Executes a Code Inspector inspection in a background job for all objects included in the given transport request.' )
+
+                                            ( class_name = 'YCL_AAI_FC_CI_TOOLS'
+                                              method_name = 'GET_INSPECTION_RESULTS'
+                                              description = 'Returns the inspection results from a previously executed Code Inspector inspection for the given transport request.' )
+
+                                            ( class_name = 'YCL_AAI_FC_CI_TOOLS'
+                                              method_name = 'GET_INSPECTION_STATUS'
+                                              description = 'Returns the status (planned, running, performed) of a Code Inspector inspection for the given transport request.' )
+
+                                            ( class_name = 'YCL_AAI_FC_ATC_TOOLS'
+                                              method_name = 'RUN'
+                                              description = 'Executes an ATC Run for all objects included in the given transport request and returns the results.' )
+
+                                            ( class_name = 'YCL_AAI_FC_ATC_TOOLS'
+                                              method_name = 'GET_RESULTS'
+                                              description = 'Returns the results from a previously executed ATC Run for the given transport request.' )
+
                                                 ) ) ACCEPTING DUPLICATE KEYS.
 
     out->write( |{ sy-dbcnt } tools inserted into table yaai_tool.| ).

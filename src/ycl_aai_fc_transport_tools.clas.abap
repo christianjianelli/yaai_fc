@@ -23,8 +23,14 @@ CLASS ycl_aai_fc_transport_tools DEFINITION
 
     METHODS search
       IMPORTING
-                i_description     TYPE as4text OPTIONAL
-      RETURNING VALUE(r_response) TYPE string.
+                i_username            TYPE uname OPTIONAL
+                i_modifiable          TYPE abap_bool
+                i_released            TYPE abap_bool
+                i_workbench           TYPE abap_bool
+                i_customizing         TYPE abap_bool
+                i_transport_of_copies TYPE abap_bool
+                i_description         TYPE as4text OPTIONAL
+      RETURNING VALUE(r_response)     TYPE string.
 
     METHODS release
       IMPORTING
@@ -123,18 +129,52 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
 
   METHOD search.
 
-    DATA l_type TYPE string.
+    DATA: lt_trstatus   TYPE RANGE OF e070-trstatus,
+          lt_trfunction TYPE RANGE OF e070-trfunction.
+
+    DATA: l_username TYPE syst-uname,
+          l_type     TYPE string,
+          l_status   TYPE string.
 
     CLEAR r_response.
 
-    SELECT a~trkorr, b~as4text, trfunction
+    l_username = sy-uname.
+
+    IF i_username IS NOT INITIAL.
+      l_username = to_upper( condense( i_username ) ).
+    ENDIF.
+
+    APPEND VALUE #( sign = 'I' option = 'EQ' low = '?' ) TO lt_trstatus.
+    APPEND VALUE #( sign = 'I' option = 'EQ' low = '?' ) TO lt_trfunction.
+
+    IF i_modifiable = abap_true.
+      APPEND VALUE #( sign = 'I' option = 'EQ' low = 'D' ) TO lt_trstatus.
+    ENDIF.
+
+    IF i_released = abap_true.
+      APPEND VALUE #( sign = 'I' option = 'EQ' low = 'R' ) TO lt_trstatus.
+    ENDIF.
+
+    IF i_workbench = abap_true.
+      APPEND VALUE #( sign = 'I' option = 'EQ' low = 'K' ) TO lt_trfunction.
+    ENDIF.
+
+    IF i_customizing = abap_true.
+      APPEND VALUE #( sign = 'I' option = 'EQ' low = 'W' ) TO lt_trfunction.
+    ENDIF.
+
+    IF i_transport_of_copies = abap_true.
+      APPEND VALUE #( sign = 'I' option = 'EQ' low = 'T' ) TO lt_trfunction.
+    ENDIF.
+
+    SELECT a~trkorr, b~as4text, a~trfunction, a~trstatus
       FROM e070 AS a
       LEFT OUTER JOIN e07t AS b
       ON a~trkorr = b~trkorr
       AND b~langu = @sy-langu
-      WHERE a~as4user = @sy-uname
-        AND a~trfunction IN ( 'W', 'K' )
-        AND a~trstatus = 'D'
+      WHERE a~as4user = @l_username
+        AND a~trfunction IN @lt_trfunction
+        AND a~trstatus IN @lt_trstatus
       INTO TABLE @DATA(lt_transport_requests).
 
     IF sy-subrc <> 0.
@@ -156,10 +196,22 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
         ENDIF.
       ENDIF.
 
-      l_type = COND #( WHEN <ls_transport_request>-trfunction = 'K' THEN 'Workbench' ELSE 'Customizing' ).
+      l_type = COND #( WHEN <ls_transport_request>-trfunction = 'K'
+                       THEN 'Workbench'
+                       WHEN <ls_transport_request>-trfunction = 'W'
+                       THEN 'Customizing'
+                       WHEN <ls_transport_request>-trfunction = 'T'
+                       THEN 'Transport of copies'
+                       ELSE space ).
+
+      l_status = COND #( WHEN <ls_transport_request>-trstatus = 'D'
+                         THEN 'Modifiable'
+                         WHEN <ls_transport_request>-trstatus = 'R'
+                         THEN 'Released'
+                         ELSE space ).
 
       r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
-      r_response = |{ r_response }Transport Request: { <ls_transport_request>-trkorr }, Type: { l_type }, Description: { <ls_transport_request>-as4text } |.
+      r_response = |{ r_response }Transport Request: { <ls_transport_request>-trkorr }, Type: { l_type }, Status: { l_status }, Description: { <ls_transport_request>-as4text } |.
 
     ENDLOOP.
 
@@ -208,10 +260,8 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_true.
-    DATA(l_search) = abap_false.
-
-    DATA(l_add_object) = abap_true.
+    DATA(l_read) = abap_false.
+    DATA(l_search) = abap_true.
 
     CASE abap_true.
 
@@ -225,7 +275,15 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
 
       WHEN l_search.
 
-        l_response = me->search( 'AI' ).
+        l_response = me->search(
+*                       i_username            =
+                       i_modifiable          = abap_true
+                       i_released            = abap_false
+                       i_workbench           = abap_true
+                       i_customizing         = abap_false
+                       i_transport_of_copies = abap_false
+*                       i_description         =
+                     ).
 
       WHEN l_read.
 
