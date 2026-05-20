@@ -13,7 +13,7 @@ CLASS ycl_aai_fc_email_tools DEFINITION
                 i_cc              TYPE yde_aai_fc_email_cc OPTIONAL
                 i_subject         TYPE yde_aai_fc_email_subject
                 i_body            TYPE yde_aai_fc_email_body
-                i_type            TYPE yde_aai_fc_email_type DEFAULT 'HTM'
+                i_type            TYPE yde_aai_fc_email_type OPTIONAL
                 i_t_attachments   TYPE ytt_aai_fc_file_attachments OPTIONAL
       RETURNING VALUE(r_response) TYPE string.
 
@@ -39,6 +39,22 @@ CLASS ycl_aai_fc_email_tools IMPLEMENTATION.
 
     CLEAR r_response.
 
+    DATA(l_type) = i_type.
+
+    IF l_type IS INITIAL.
+      l_type = 'RAW'.
+    ENDIF.
+
+    IF i_subject IS INITIAL.
+      r_response = 'It is mandatory to inform the Email subject'.
+      RETURN.
+    ENDIF.
+
+    IF i_body IS INITIAL.
+      r_response = 'It is mandatory to pass some content for the Email body'.
+      RETURN.
+    ENDIF.
+
     TRY.
 
         l_subject = i_subject.
@@ -47,7 +63,7 @@ CLASS ycl_aai_fc_email_tools IMPLEMENTATION.
 
         lo_send_request = cl_bcs=>create_persistent( ).
 
-        lo_document = cl_document_bcs=>create_document( i_type = i_type
+        lo_document = cl_document_bcs=>create_document( i_type = l_type
                                                         i_text = lt_body
                                                         i_subject = l_subject ).
 
