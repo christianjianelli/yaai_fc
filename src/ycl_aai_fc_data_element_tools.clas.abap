@@ -852,10 +852,16 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         ch_t_e071           = lt_e071
     ).
 
+    SELECT SINGLE sptxt
+      FROM t002t
+      WHERE spras = @sy-langu
+        AND sprsl = @l_language
+      INTO @DATA(l_language_description).
+
     IF l_success = abap_true.
-      r_response = |Translations updated successfully. Data Element: { l_data_element }. Target language: { l_language }.|.
+      r_response = |Translations updated successfully. Data Element: { l_data_element }. Target language: { l_language_description }.|.
     ELSE.
-      r_response = |Translations updated successfully but they were not added to the transport request { l_transport_request }. Data Element: { l_data_element }. Target language: { l_language }.|.
+      r_response = |Translations updated successfully but they were not added to the transport request { l_transport_request }. Data Element: { l_data_element }. Target language: { l_language_description }.|.
     ENDIF.
 
   ENDMETHOD.

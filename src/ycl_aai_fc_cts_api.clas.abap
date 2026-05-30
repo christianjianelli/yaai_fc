@@ -50,15 +50,21 @@ CLASS ycl_aai_fc_cts_api DEFINITION
                 i_transport_request TYPE trkorr
       RETURNING VALUE(r_success)    TYPE abap_bool.
 
+    METHODS change_request_description
+      IMPORTING
+                i_transport_request TYPE trkorr
+                i_description       TYPE string
+      RETURNING VALUE(r_success)    TYPE abap_bool.
+
     METHODS release
       IMPORTING
-        i_transport_request    TYPE trkorr
-        i_test_mode            TYPE abap_bool DEFAULT abap_false
-        i_ignore_locks         TYPE abap_bool DEFAULT abap_true
+        i_transport_request TYPE trkorr
+        i_test_mode         TYPE abap_bool DEFAULT abap_false
+        i_ignore_locks      TYPE abap_bool DEFAULT abap_true
       EXPORTING
-        e_released             TYPE abap_bool
-        e_task_released        TYPE abap_bool
-        e_error                TYPE string.
+        e_released          TYPE abap_bool
+        e_task_released     TYPE abap_bool
+        e_error             TYPE string.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -227,6 +233,30 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
         r_success = abap_true.
 
       CATCH cx_cts_rest_api_exception ##NO_HANDLER. " CTS REST API Exception
+
+    ENDTRY.
+
+  ENDMETHOD.
+
+  METHOD change_request_description.
+
+    DATA lo_ex_cts_rest_api TYPE REF TO cx_cts_rest_api_exception.
+
+    r_success = abap_false.
+
+    TRY.
+
+        NEW cl_cts_rest_api_impl( )->if_cts_rest_api~change_request_description(
+          EXPORTING
+            iv_trkorr      = i_transport_request
+            iv_description = CONV #( i_description )
+        ).
+
+        r_success = abap_true.
+
+      CATCH cx_cts_rest_api_exception. " CTS REST API Exception
+
+        r_success = abap_false.
 
     ENDTRY.
 

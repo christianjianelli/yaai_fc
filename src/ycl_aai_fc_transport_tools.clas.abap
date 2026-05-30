@@ -32,6 +32,12 @@ CLASS ycl_aai_fc_transport_tools DEFINITION
                 i_description         TYPE as4text OPTIONAL
       RETURNING VALUE(r_response)     TYPE string.
 
+    METHODS change_description
+      IMPORTING
+                i_transport_request TYPE yde_aai_fc_transport_request
+                i_description       TYPE as4text
+      RETURNING VALUE(r_response)   TYPE string.
+
     METHODS release
       IMPORTING
                 i_transport_request TYPE yde_aai_fc_transport_request
@@ -115,8 +121,11 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
         e_t_objects         = DATA(lt_objects)
     ).
 
+    DATA(l_status) = COND string( WHEN ls_header-trstatus = 'D' THEN 'Modifiable' ELSE 'Released' ).
+
     r_response = |Transport request: { l_transport_request }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_header-as4text }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Status: { l_status }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Objects:|.
 
     LOOP AT lt_objects ASSIGNING FIELD-SYMBOL(<ls_object>).
@@ -206,9 +215,7 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
 
       l_status = COND #( WHEN <ls_transport_request>-trstatus = 'D'
                          THEN 'Modifiable'
-                         WHEN <ls_transport_request>-trstatus = 'R'
-                         THEN 'Released'
-                         ELSE space ).
+                         ELSE 'Released' ).
 
       r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
       r_response = |{ r_response }Transport Request: { <ls_transport_request>-trkorr }, Type: { l_type }, Status: { l_status }, Description: { <ls_transport_request>-as4text } |.
@@ -221,6 +228,33 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
     ENDIF.
 
     r_response = 'Here is the list of the modifiable transport requests found:' && r_response.
+
+  ENDMETHOD.
+
+  METHOD change_description.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+      r_response = |The transport request { l_transport_request } is invalid.|.
+      RETURN.
+    ENDIF.
+
+    DATA(l_success) = lo_cts_api->change_request_description(
+      EXPORTING
+        i_transport_request = l_transport_request
+        i_description       = CONV #( i_description )
+    ).
+
+    IF l_success = abap_true.
+      r_response = |Transport request { l_transport_request } description changed.|.
+    ELSE.
+      r_response = |Transport request { l_transport_request } description not changed.|.
+    ENDIF.
 
   ENDMETHOD.
 
