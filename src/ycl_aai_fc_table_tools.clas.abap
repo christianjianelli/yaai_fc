@@ -112,36 +112,50 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
 
     l_package = condense( to_upper( l_package ) ).
 
-    IF to_upper( i_delivery_class ) <> 'A' AND
-       to_upper( i_delivery_class ) <> 'C'.
+    DATA(l_delivery_class) = i_delivery_class.
 
-      r_response = |The delivery class { i_delivery_class } is invalid.|.
+    IF l_delivery_class IS NOT INITIAL.
 
-      RETURN.
+      IF to_upper( i_delivery_class ) <> 'A' AND
+         to_upper( i_delivery_class ) <> 'C'.
+
+        r_response = |The delivery class { i_delivery_class } is invalid.|.
+
+        RETURN.
+
+      ENDIF.
 
     ENDIF.
 
     l_size_category = condense( i_size_category ).
 
-    FIND REGEX '^[0-9]$' IN l_size_category.
+    IF l_size_category IS NOT INITIAL.
 
-    IF sy-subrc <> 0.
+      FIND REGEX '^[0-9]$' IN l_size_category.
 
-      r_response = |The size category { i_size_category } is invalid.|.
+      IF sy-subrc <> 0.
 
-      RETURN.
+        r_response = |The size category { i_size_category } is invalid.|.
+
+        RETURN.
+
+      ENDIF.
 
     ENDIF.
 
     DATA(l_data_class) = to_upper( i_data_class ).
 
-    IF l_data_class <> 'APPL0' AND
-       l_data_class <> 'APPL1' AND
-       l_data_class <> 'APPL2'.
+    IF l_data_class IS NOT INITIAL.
 
-      r_response = |The data class { i_data_class } is invalid.|.
+      IF l_data_class <> 'APPL0' AND
+         l_data_class <> 'APPL1' AND
+         l_data_class <> 'APPL2'.
 
-      RETURN.
+        r_response = |The data class { i_data_class } is invalid.|.
+
+        RETURN.
+
+      ENDIF.
 
     ENDIF.
 
