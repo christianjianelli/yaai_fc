@@ -19,263 +19,299 @@ CLASS ycl_aai_fc_tools_initial_setup IMPLEMENTATION.
 
   METHOD if_oo_adt_classrun~main.
 
-    INSERT yaai_tool FROM TABLE @( VALUE #( ( class_name = 'YCL_AAI_FC_DOMAIN_TOOLS'
+    MODIFY yaai_tool FROM TABLE @( VALUE #( ( class_name = 'YCL_AAI_FC_DOMAIN_TOOLS'
                                               method_name = 'CREATE'
-                                              description = 'Create a new domain in the ABAP Dictionary with the specified parameters.' )
+                                              description = 'Creates a new domain in the ABAP Dictionary with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_DOMAIN_TOOLS'
                                               method_name = 'READ'
-                                              description = 'Retrieve the details of an existing domain.' )
+                                              description = 'Retrieves the details of an existing domain.' )
 
                                             ( class_name = 'YCL_AAI_FC_DOMAIN_TOOLS'
                                               method_name = 'SEARCH'
-                                              description = 'Search for domains in the specified package, optionally filtered by name or description.' )
+                                              description = 'Searches for domains in the specified package, optionally filtered by name or description.' )
 
                                             ( class_name = 'YCL_AAI_FC_DOMAIN_TOOLS'
                                               method_name = 'UPDATE'
-                                              description = 'Update an existing domain with the specified parameters.' )
+                                              description = 'Updates an existing domain with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_DOMAIN_TOOLS'
                                               method_name = 'DELETE'
-                                              description = 'Delete an existing domain.' )
+                                              description = 'Deletes an existing domain.' )
 
                                             ( class_name = 'YCL_AAI_FC_DOMAIN_TOOLS'
                                               method_name = 'ACTIVATE'
-                                              description = 'Activate an existing domain.' )
+                                              description = 'Activates an existing domain.' )
 
                                             ( class_name = 'YCL_AAI_FC_DOMAIN_TOOLS'
                                               method_name = 'SET_TRANSLATION'
-                                              description = 'Set the translation for an existing domain fixed values in the specified language.' )
+                                              description = 'Sets translations for the fixed values of an existing domain in the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_DOMAIN_TOOLS'
                                               method_name = 'GET_TRANSLATION'
-                                              description = 'Get the translation for an existing domain fixed values in the specified language.' )
+                                              description = 'Retrieves translations for the fixed values of an existing domain in the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_DATA_ELEMENT_TOOLS'
                                               method_name = 'CREATE'
-                                              description = 'Create a new data element in the ABAP Dictionary with the specified parameters.' )
+                                              description = 'Creates a new data element in the ABAP Dictionary with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_DATA_ELEMENT_TOOLS'
                                               method_name = 'READ'
-                                              description = 'Retrieve the details of an existing data element.' )
+                                              description = 'Retrieves the details of an existing data element.' )
 
                                             ( class_name = 'YCL_AAI_FC_DATA_ELEMENT_TOOLS'
                                               method_name = 'SEARCH'
-                                              description = 'Search for data elements in the specified package, optionally filtered by name or description.' )
+                                              description = 'Searches for data elements in the specified package, optionally filtered by name or description.' )
 
                                             ( class_name = 'YCL_AAI_FC_DATA_ELEMENT_TOOLS'
                                               method_name = 'UPDATE'
-                                              description = 'Update an existing data element with the specified parameters.' )
+                                              description = 'Updates an existing data element with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_DATA_ELEMENT_TOOLS'
                                               method_name = 'DELETE'
-                                              description = 'Delete an existing data element.' )
+                                              description = 'Deletes an existing data element.' )
 
                                             ( class_name = 'YCL_AAI_FC_DATA_ELEMENT_TOOLS'
                                               method_name = 'ACTIVATE'
-                                              description = 'Activate an existing data element.' )
+                                              description = 'Activates an existing data element.' )
 
                                             ( class_name = 'YCL_AAI_FC_DATA_ELEMENT_TOOLS'
                                               method_name = 'SET_TRANSLATION'
-                                              description = 'Set the translation for an existing data element in the specified language.' )
+                                              description = 'Sets translations for an existing data element in the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_DATA_ELEMENT_TOOLS'
                                               method_name = 'GET_TRANSLATION'
-                                              description = 'Get the translation for an existing data element in the specified language.' )
+                                              description = 'Retrieves translations for an existing data element in the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_STRUCTURE_TOOLS'
                                               method_name = 'CREATE'
-                                              description = 'Create a new structure in the ABAP Dictionary with the specified parameters.' )
+                                              description = 'Creates a new structure in the ABAP Dictionary with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_STRUCTURE_TOOLS'
                                               method_name = 'READ'
-                                              description = 'Retrieve the details of an existing structure.' )
+                                              description = 'Retrieves the details of an existing structure.' )
 
                                             ( class_name = 'YCL_AAI_FC_STRUCTURE_TOOLS'
                                               method_name = 'UPDATE'
-                                              description = 'Update an existing structure with the specified parameters.' )
+                                              description = 'Updates an existing structure with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_STRUCTURE_TOOLS'
                                               method_name = 'DELETE'
-                                              description = 'Delete an existing structure.' )
+                                              description = 'Deletes an existing structure.' )
 
                                             ( class_name = 'YCL_AAI_FC_STRUCTURE_TOOLS'
                                               method_name = 'SEARCH'
-                                              description = 'Search for structures in the specified package, optionally filtered by name or description.' )
+                                              description = 'Searches for structures in the specified package, optionally filtered by name or description.' )
 
                                             ( class_name = 'YCL_AAI_FC_STRUCTURE_TOOLS'
                                               method_name = 'ACTIVATE'
-                                              description = 'Activate an existing structure.' )
+                                              description = 'Activates an existing structure.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TOOLS'
                                               method_name = 'CREATE'
-                                              description = 'Create a new table in the ABAP Dictionary with the specified parameters.' )
+                                              description = 'Creates a new database table in the ABAP Dictionary with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TOOLS'
                                               method_name = 'READ'
-                                              description = 'Retrieve the details of an existing table.' )
+                                              description = 'Retrieves the details of an existing database table.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TOOLS'
                                               method_name = 'UPDATE'
-                                              description = 'Update an existing table with the specified parameters.' )
+                                              description = 'Updates an existing database table with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TOOLS'
                                               method_name = 'DELETE'
-                                              description = 'Delete an existing table.' )
+                                              description = 'Deletes an existing database table.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TOOLS'
                                               method_name = 'SEARCH'
-                                              description = 'Search for tables in the specified package, optionally filtered by name or description.' )
+                                              description = 'Searches for database tables in the specified package, optionally filtered by name or description.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TOOLS'
                                               method_name = 'ACTIVATE'
-                                              description = 'Activate an existing table.' )
+                                              description = 'Activates an existing database table.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TYPE_TOOLS'
                                               method_name = 'CREATE'
-                                              description = 'Create a new table type in the ABAP Dictionary with the specified parameters.' )
+                                              description = 'Creates a new table type in the ABAP Dictionary with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TYPE_TOOLS'
                                               method_name = 'READ'
-                                              description = 'Retrieve the details of an existing table type.' )
+                                              description = 'Retrieves the details of an existing table type.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TYPE_TOOLS'
                                               method_name = 'UPDATE'
-                                              description = 'Update an existing table type with the specified parameters.' )
+                                              description = 'Updates an existing table type with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TYPE_TOOLS'
                                               method_name = 'DELETE'
-                                              description = 'Delete an existing table type.' )
+                                              description = 'Deletes an existing table type.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TYPE_TOOLS'
                                               method_name = 'SEARCH'
-                                              description = 'Search for table types in the specified package, optionally filtered by name or description.' )
+                                              description = 'Searches for table types in the specified package, optionally filtered by name or description.' )
 
                                             ( class_name = 'YCL_AAI_FC_TABLE_TYPE_TOOLS'
                                               method_name = 'ACTIVATE'
-                                              description = 'Activate an existing table type.' )
+                                              description = 'Activates an existing table type.' )
 
                                             ( class_name = 'YCL_AAI_FC_MESSAGE_CLASS_TOOLS'
                                               method_name = 'CREATE'
-                                              description = 'Create a new message class with the specified description.' )
+                                              description = 'Creates a new message class with the specified description.' )
 
                                             ( class_name = 'YCL_AAI_FC_MESSAGE_CLASS_TOOLS'
                                               method_name = 'ADD_MESSAGE'
-                                              description = 'Add a new message to an existing message class.' )
+                                              description = 'Adds a new message to an existing message class.' )
 
                                             ( class_name = 'YCL_AAI_FC_MESSAGE_CLASS_TOOLS'
                                               method_name = 'UPDATE_MESSAGE'
-                                              description = 'Update an existing message in a message class.' )
+                                              description = 'Updates an existing message in a message class.' )
 
                                             ( class_name = 'YCL_AAI_FC_MESSAGE_CLASS_TOOLS'
                                               method_name = 'DELETE_MESSAGE'
-                                              description = 'Delete an existing message from a message class.' )
+                                              description = 'Deletes an existing message from a message class.' )
 
                                             ( class_name = 'YCL_AAI_FC_MESSAGE_CLASS_TOOLS'
                                               method_name = 'READ_ALL_MESSAGES'
-                                              description = 'Read all messages from an existing message class.' )
+                                              description = 'Retrieves all messages from an existing message class.' )
 
                                             ( class_name = 'YCL_AAI_FC_MESSAGE_CLASS_TOOLS'
                                               method_name = 'SET_TRANSLATION'
-                                              description = 'Set the translation for a message in a message class.' )
+                                              description = 'Sets the translation for a message in a message class.' )
 
                                             ( class_name = 'YCL_AAI_FC_MESSAGE_CLASS_TOOLS'
                                               method_name = 'GET_TRANSLATION'
-                                              description = 'Get the translation for a message in a message class.' )
+                                              description = 'Retrieves the translation for a message in a message class.' )
 
                                             ( class_name = 'YCL_AAI_FC_TEXT_POOL_TOOLS'
                                               method_name = 'CREATE'
-                                              description = 'Create text elements for a program in the specified language.' )
+                                              description = 'Creates text elements for a program in the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_TEXT_POOL_TOOLS'
                                               method_name = 'READ'
-                                              description = 'Read text elements from a program in the specified language.' )
+                                              description = 'Retrieves text elements from a program in the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_TEXT_POOL_TOOLS'
                                               method_name = 'UPDATE'
-                                              description = 'Update text elements for a program in the specified language.' )
+                                              description = 'Updates text elements for a program in the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_TEXT_POOL_TOOLS'
                                               method_name = 'DELETE'
-                                              description = 'Delete a specific text element from a program.' )
+                                              description = 'Deletes a text element from a program.' )
 
                                             ( class_name = 'YCL_AAI_FC_TEXT_POOL_TOOLS'
                                               method_name = 'TRANSLATE'
-                                              description = 'Translate text elements for a program into the specified language.' )
+                                              description = 'Translates text elements for a program into the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSPORT_TOOLS'
                                               method_name = 'CREATE'
-                                              description = 'Create a new transport request with the specified description and category.' )
+                                              description = 'Creates a new transport request with the specified description and category.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSPORT_TOOLS'
                                               method_name = 'READ'
-                                              description = 'Read the details of an existing transport request.' )
+                                              description = 'Retrieves the details of an existing transport request.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSPORT_TOOLS'
                                               method_name = 'SEARCH'
-                                              description = 'Search for transport requests, optionally filtered by description.' )
+                                              description = 'Searches for transport requests, optionally filtered by description.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
                                               method_name = 'CREATE_REPORT_TRANSACTION'
-                                              description = 'Create a new ABAP report transaction with the specified parameters.' )
+                                              description = 'Creates a new report transaction with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
                                               method_name = 'CREATE_DIALOG_TRANSACTION'
-                                              description = 'Create a new ABAP dialog transaction with the specified parameters.' )
+                                              description = 'Creates a new dialog transaction with the specified parameters.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
                                               method_name = 'READ'
-                                              description = 'Retrieve the details of an existing ABAP transaction.' )
+                                              description = 'Retrieves the details of an existing transaction.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
                                               method_name = 'SEARCH'
-                                              description = 'Search for ABAP transaction in the specified package, optionally filtered by name or description.' )
+                                              description = 'Searches for transactions in the specified package, optionally filtered by name or description.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
                                               method_name = 'DELETE'
-                                              description = 'Delete an existing ABAP transaction.' )
+                                              description = 'Deletes an existing transaction.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
                                               method_name = 'SET_TRANSLATION'
-                                              description = 'Set the translation for an existing ABAP transaction in the specified language.' )
+                                              description = 'Sets translations for an existing transaction in the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_TRANSACTION_TOOLS'
                                               method_name = 'GET_TRANSLATION'
-                                              description = 'Get the translation for an existing ABAP transaction in the specified language.' )
+                                              description = 'Retrieves translations for an existing transaction in the specified language.' )
 
                                             ( class_name = 'YCL_AAI_FC_EMAIL_TOOLS'
                                               method_name = 'SEND_MAIL'
-                                              description = 'Send email.' )
+                                              description = 'Sends an email message.' )
 
                                             ( class_name = 'YCL_AAI_FC_RUNTIME_ERROR_TOOLS'
                                               method_name = 'GET_RUNTIME_ERRORS'
-                                              description = 'Get ABAP runtime errors (ST22).' )
+                                              description = 'Retrieves ABAP runtime errors from transaction ST22.' )
 
                                             ( class_name = 'YCL_AAI_FC_CI_TOOLS'
                                               method_name = 'RUN_INSPECTION'
-                                              description = 'Executes a Code Inspector inspection for all objects included in the given transport request and returns the inspection results.' )
+                                              description = 'Executes a Code Inspector inspection for all objects included in the specified transport request and returns the inspection results.' )
 
                                             ( class_name = 'YCL_AAI_FC_CI_TOOLS'
                                               method_name = 'RUN_INSPECTION_VIA_JOB'
-                                              description = 'Executes a Code Inspector inspection in a background job for all objects included in the given transport request.' )
+                                              description = 'Executes a Code Inspector inspection in a background job for all objects included in the specified transport request.' )
 
                                             ( class_name = 'YCL_AAI_FC_CI_TOOLS'
                                               method_name = 'GET_INSPECTION_RESULTS'
-                                              description = 'Returns the inspection results from a previously executed Code Inspector inspection for the given transport request.' )
+                                              description = 'Retrieves the results of a previously executed Code Inspector inspection for the specified transport request.' )
 
                                             ( class_name = 'YCL_AAI_FC_CI_TOOLS'
                                               method_name = 'GET_INSPECTION_STATUS'
-                                              description = 'Returns the status (planned, running, performed) of a Code Inspector inspection for the given transport request.' )
+                                              description = 'Retrieves the status of a Code Inspector inspection for the specified transport request.' )
 
                                             ( class_name = 'YCL_AAI_FC_ATC_TOOLS'
                                               method_name = 'RUN'
-                                              description = 'Executes an ATC Run for all objects included in the given transport request and returns the results.' )
+                                              description = 'Executes an ATC check for all objects included in the specified transport request and returns the results.' )
 
                                             ( class_name = 'YCL_AAI_FC_ATC_TOOLS'
                                               method_name = 'GET_RESULTS'
-                                              description = 'Returns the results from a previously executed ATC Run for the given transport request.' )
+                                              description = 'Retrieves the results of a previously executed ATC check for the specified transport request.' )
 
-                                                ) ) ACCEPTING DUPLICATE KEYS.
+                                            ( class_name = 'YCL_AAI_FC_SQL_TOOLS'
+                                              method_name = 'EXECUTE_SQL_QUERY'
+                                              description = 'Executes a SQL query on the SAP system and returns the results in JSON format.' )
+
+                                            ( class_name = 'YCL_AAI_FC_SQL_TOOLS'
+                                              method_name = 'EXECUTE_SQL_INSERT'
+                                              description = 'Executes a SQL INSERT statement on the SAP system and returns the execution result.' )
+
+                                            ( class_name = 'YCL_AAI_FC_SQL_TOOLS'
+                                              method_name = 'EXECUTE_SQL_UPDATE'
+                                              description = 'Executes a SQL UPDATE statement on the SAP system and returns the execution result.' )
+
+                                            ( class_name = 'YCL_AAI_FC_SQL_TOOLS'
+                                              method_name = 'EXECUTE_SQL_DELETE'
+                                              description = 'Executes a SQL DELETE statement on the SAP system and returns the execution result.' )
+
+                                            ( class_name = 'YCL_AAI_FC_CDS_TOOLS'
+                                              method_name = 'CREATE'
+                                              description = 'Creates a new CDS view in the SAP system.' )
+
+                                            ( class_name = 'YCL_AAI_FC_CDS_TOOLS'
+                                              method_name = 'READ'
+                                              description = 'Retrieves the source code of a CDS view.' )
+
+                                            ( class_name = 'YCL_AAI_FC_CDS_TOOLS'
+                                              method_name = 'SEARCH'
+                                              description = 'Searches for CDS views in the specified package, optionally filtered by name or description.' )
+
+                                            ( class_name = 'YCL_AAI_FC_CDS_TOOLS'
+                                              method_name = 'UPDATE'
+                                              description = 'Updates an existing CDS view.' )
+
+                                            ( class_name = 'YCL_AAI_FC_CDS_TOOLS'
+                                              method_name = 'DELETE'
+                                              description = 'Deletes an existing CDS view.' )
+
+                                                ) ).
 
     out->write( |{ sy-dbcnt } tools inserted into table yaai_tool.| ).
 
