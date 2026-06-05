@@ -22,23 +22,31 @@ This library is part of the [ABAP AI tools](https://github.com/christianjianelli
 
 #### Core DDIC Objects
 - **Domains** (`YCL_AAI_FC_DOMAIN_TOOLS`)
-  - Create, update, delete domains
+  - Read, search, create, update, delete domains
   - Manage fixed values
   - Manage translations for domain fixed values
 
 - **Data Elements** (`YCL_AAI_FC_DATA_ELEMENT_TOOLS`)
-  - Create, update, delete data elements with built-in types or domain references
+  - Read, search, create, update, delete data elements with built-in types or domain references
   - Manage translations for data element labels
 
 - **Structures** (`YCL_AAI_FC_STRUCTURE_TOOLS`)
-  - Create, update, delete structures
+  - Read, search, create, update, delete structures
 
 - **Tables** (`YCL_AAI_FC_TABLE_TOOLS`)
-  - Create, update, delete transparent tables
+  - Read, search, create, update, delete transparent tables
   - Manage technical settings (data class, size category)
 
 - **Table Types** (`YCL_AAI_FC_TABLE_TYPE_TOOLS`)
-  - Create, update, delete table types
+  - Read, search, create, update, delete table types
+
+- **CDS views** (`YCL_AAI_FC_CDS_TOOLS`)
+  - Read, search, create, update, delete CDS views
+
+### SQL Tools
+
+- **SQL** (`YCL_AAI_FC_SQL_TOOLS`)
+  - Perform SELECT, INSERT, UPDATE and DELETE statements on the SAP system
 
 ### Development Artifacts
 
@@ -83,6 +91,8 @@ Classes
 ├── YCL_AAI_FC_STRUCTURE_TOOLS      # Structure management
 ├── YCL_AAI_FC_TABLE_TOOLS          # Table management
 ├── YCL_AAI_FC_TABLE_TYPE_TOOLS     # Table type management
+├── YCL_AAI_FC_CDS_TOOLS            # CDS view management
+├── YCL_AAI_FC_SQL_TOOLS            # SQL
 ├── YCL_AAI_FC_MESSAGE_CLASS_TOOLS  # Message class management
 ├── YCL_AAI_FC_TEXT_POOL_TOOLS      # Text pool management
 └── YCL_AAI_FC_TRANSPORT_TOOLS      # Transport request management
