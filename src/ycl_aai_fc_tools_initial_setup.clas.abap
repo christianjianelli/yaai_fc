@@ -311,6 +311,10 @@ CLASS ycl_aai_fc_tools_initial_setup IMPLEMENTATION.
                                               method_name = 'DELETE'
                                               description = 'Deletes an existing CDS view.' )
 
+                                            ( class_name = 'YCL_AAI_FC_CDS_TOOLS'
+                                              method_name = 'CHECK'
+                                              description = 'Performs a validation check on an existing CDS view and returns any errors.' )
+
                                                 ) ).
 
     out->write( |{ sy-dbcnt } tools inserted into table yaai_tool.| ).
