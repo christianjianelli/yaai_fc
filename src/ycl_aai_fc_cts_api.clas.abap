@@ -9,7 +9,7 @@ CLASS ycl_aai_fc_cts_api DEFINITION
 
     METHODS create
       IMPORTING
-                i_description              TYPE string
+                i_description              TYPE as4text
                 i_request_category         TYPE trfunction DEFAULT 'K'
       RETURNING VALUE(r_transport_request) TYPE trkorr.
 
