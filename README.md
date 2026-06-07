@@ -65,6 +65,20 @@ This library is part of the [ABAP AI tools](https://github.com/christianjianelli
   - Create workbench and customizing requests
   - Search and read transport request details
 
+### ABAP Source Code Tools
+
+- **ABAP Class** (`YCL_AAI_FC_OO_CLASS_TOOLS`)
+  - Read ABAP class source code
+
+- **ABAP Interface** (`YCL_AAI_FC_OO_INTERFACE_TOOLS`)
+  - Read ABAP interface source code
+
+- **ABAP Program/Include** (`YCL_AAI_FC_PROGRAM_TOOLS`)
+  - Read ABAP program/include source code
+
+- **ABAP Function Module** (`YCL_AAI_FC_FUNC_MODULE_TOOLS`)
+  - Read ABAP function module source code
+
 ### ABAP Runtime Errors (ST22)
 
 - **ABAP Runtime Errors** (`YCL_AAI_FC_RUNTIME_ERROR_TOOLS`)
@@ -96,6 +110,10 @@ Classes
 ├── YCL_AAI_FC_MESSAGE_CLASS_TOOLS  # Message class management
 ├── YCL_AAI_FC_TEXT_POOL_TOOLS      # Text pool management
 └── YCL_AAI_FC_TRANSPORT_TOOLS      # Transport request management
+└── YCL_AAI_FC_OO_CLASS_TOOLS       # ABAP Class
+└── YCL_AAI_FC_OO_INTERFACE_TOOLS   # ABAP Interface
+└── YCL_AAI_FC_OO_PROGRAM_TOOLS     # ABAP Program/Include
+└── YCL_AAI_FC_OO_FUNC_MODULE_TOOLS # ABAP Function Module
 └── YCL_AAI_FC_RUNTIME_ERROR_TOOLS  # ABAP Runtime Errors
 └── YCL_AAI_FC_ATC_TOOLS            # ABAP Test Cockpit (ATC)
 └── YCL_AAI_FC_CI_TOOLS             # Code Inspector
