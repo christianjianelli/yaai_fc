@@ -7,6 +7,9 @@ CLASS ycl_aai_fc_oo_interface_tools DEFINITION
 
     INTERFACES if_oo_adt_classrun.
 
+    CONSTANTS: mc_pgmid  TYPE e071-pgmid  VALUE 'R3TR',
+               mc_object TYPE e071-object VALUE 'INTF'.
+
     METHODS read
       IMPORTING
                 i_interface_name  TYPE yde_aai_fc_oo_interface_name
@@ -74,14 +77,72 @@ CLASS ycl_aai_fc_oo_interface_tools IMPLEMENTATION.
 
   METHOD search.
 
+    DATA: l_interface_name    TYPE string,
+          l_short_description TYPE string.
+
+    CLEAR r_response.
+
+    DATA(l_package) = i_package.
+
+    l_package = condense( to_upper( l_package ) ).
+
+    SELECT pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND devclass = @l_package
+      INTO TABLE @DATA(lt_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |No interface found in package { l_package }.|.
+      RETURN.
+    ENDIF.
+
+    l_interface_name = |*{ i_interface_name }*|.
+
+    l_short_description = |*{ i_short_description }*|.
+
+    LOOP AT lt_tadir ASSIGNING FIELD-SYMBOL(<ls_tadir>).
+
+      IF l_interface_name IS NOT INITIAL.
+
+        IF NOT <ls_tadir>-obj_name CP l_interface_name.
+          CONTINUE.
+        ENDIF.
+
+      ENDIF.
+
+      IF r_response IS NOT INITIAL.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
+      ENDIF.
+
+      SELECT SINGLE clsname, langu, descript
+        FROM seoclasstx
+        INTO @DATA(ls_seoclasstx)
+        WHERE clsname = @<ls_tadir>-obj_name
+          AND langu = @sy-langu.
+
+      IF i_short_description IS NOT INITIAL.
+
+        IF NOT ls_seoclasstx-descript CP l_short_description.
+          CONTINUE.
+        ENDIF.
+
+      ENDIF.
+
+      r_response = |{ r_response }Interface: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Description: { ls_seoclasstx-descript }{ cl_abap_char_utilities=>newline }|.
+
+    ENDLOOP.
+
   ENDMETHOD.
 
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
 
-    DATA(l_read) = abap_true.
-    DATA(l_search) = abap_false.
+    DATA(l_read) = abap_false.
+    DATA(l_search) = abap_true.
 
     CASE abap_true.
 
@@ -90,6 +151,13 @@ CLASS ycl_aai_fc_oo_interface_tools IMPLEMENTATION.
         l_response = me->read(
           EXPORTING
             i_interface_name = 'YIF_AAI_CHAT'
+        ).
+
+      WHEN l_search.
+
+        l_response = me->search(
+          EXPORTING
+            i_package = 'YAAI'
         ).
 
     ENDCASE.

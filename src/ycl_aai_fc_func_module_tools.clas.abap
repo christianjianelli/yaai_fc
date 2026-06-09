@@ -8,7 +8,7 @@ CLASS ycl_aai_fc_func_module_tools DEFINITION
     INTERFACES if_oo_adt_classrun.
 
     CONSTANTS: mc_pgmid  TYPE e071-pgmid  VALUE 'R3TR',
-               mc_object TYPE e071-object VALUE 'PROG'.
+               mc_object TYPE e071-object VALUE 'FUGR'.
 
     TYPES ty_string_t TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
 
@@ -16,6 +16,13 @@ CLASS ycl_aai_fc_func_module_tools DEFINITION
       IMPORTING
                 i_function_module TYPE rs38l_fnam
       RETURNING VALUE(r_response) TYPE string.
+
+    METHODS search
+      IMPORTING
+                i_package           TYPE packname
+                i_function_module   TYPE rs38l_fnam OPTIONAL
+                i_short_description TYPE as4text OPTIONAL
+      RETURNING VALUE(r_response)   TYPE string.
 
   PROTECTED SECTION.
 
@@ -147,6 +154,107 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD search.
+
+    DATA: l_function_module   TYPE string,
+          l_short_description TYPE string.
+
+    CLEAR r_response.
+
+    DATA(l_package) = i_package.
+
+    l_package = condense( to_upper( l_package ) ).
+
+    SELECT pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND devclass = @l_package
+      INTO TABLE @DATA(lt_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |No function module found in package { l_package }.|.
+      RETURN.
+    ENDIF.
+
+    LOOP AT lt_tadir ASSIGNING FIELD-SYMBOL(<ls_tadir>).
+      <ls_tadir>-obj_name = 'SAPL' && <ls_tadir>-obj_name.
+    ENDLOOP.
+
+    SELECT funcname, pname
+      FROM tfdir
+      FOR ALL ENTRIES IN @lt_tadir
+      WHERE pname = @lt_tadir-obj_name
+      INTO TABLE @DATA(lt_tfdir).
+
+    SORT lt_tfdir BY pname.
+
+    IF lt_tfdir IS NOT INITIAL.
+
+      SELECT spras, funcname, stext
+        FROM tftit
+        FOR ALL ENTRIES IN @lt_tfdir
+        WHERE spras = @sy-langu
+          AND funcname = @lt_tfdir-funcname
+        ORDER BY PRIMARY KEY
+        INTO TABLE @DATA(lt_tftit).
+
+    ENDIF.
+
+    l_function_module = |*{ i_function_module }*|.
+
+    l_short_description = |*{ i_short_description }*|.
+
+    LOOP AT lt_tadir ASSIGNING <ls_tadir>.
+
+      READ TABLE lt_tfdir TRANSPORTING NO FIELDS
+        WITH KEY pname = <ls_tadir>-obj_name
+        BINARY SEARCH.
+
+      IF sy-subrc <> 0.
+        CONTINUE.
+      ENDIF.
+
+      DATA(l_tabix) = sy-tabix.
+
+      LOOP AT lt_tfdir ASSIGNING FIELD-SYMBOL(<ls_tfdir>) FROM l_tabix.
+
+        IF <ls_tfdir>-pname <> <ls_tadir>-obj_name.
+          EXIT.
+        ENDIF.
+
+        IF r_response IS NOT INITIAL.
+          r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
+        ENDIF.
+
+        r_response = |{ r_response }Function Module: { <ls_tfdir>-funcname }{ cl_abap_char_utilities=>newline }|.
+
+        READ TABLE lt_tftit ASSIGNING FIELD-SYMBOL(<ls_tftit>)
+          WITH KEY spras = sy-langu
+                   funcname =  <ls_tfdir>-funcname
+          BINARY SEARCH.
+
+        IF sy-subrc = 0.
+          r_response = |{ r_response }Description: { <ls_tftit>-stext }{ cl_abap_char_utilities=>newline }|.
+        ELSE.
+
+          SELECT spras, funcname, stext
+            FROM tftit
+            WHERE funcname = @<ls_tfdir>-funcname
+            INTO @DATA(ls_tftit)
+            UP TO 1 ROWS.
+          ENDSELECT.
+
+          r_response = |{ r_response }Description: { ls_tftit-stext }{ cl_abap_char_utilities=>newline }|.
+
+        ENDIF.
+
+      ENDLOOP.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
   METHOD _is_authorized.
 
     r_authorized = abap_true.
@@ -157,8 +265,8 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
 
     DATA l_response TYPE string.
 
-    DATA(l_read) = abap_true.
-    DATA(l_search) = abap_false.
+    DATA(l_read) = abap_false.
+    DATA(l_search) = abap_true.
 
     CASE abap_true.
 
@@ -168,6 +276,14 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
           EXPORTING
             i_function_module = 'RPY_FUNCTIONMODULE_READ_NEW'
         ).
+
+      WHEN l_search.
+
+        l_response = me->search(
+                       i_package           = '$TMP'
+*                       i_function_module   =
+*                       i_short_description =
+                     ).
 
     ENDCASE.
 
