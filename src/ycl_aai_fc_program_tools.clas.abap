@@ -154,6 +154,8 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     DATA lt_source TYPE ty_string_t.
 
+    DATA lt_errors TYPE STANDARD TABLE OF rslinlmsg.
+
     DATA: l_source        TYPE string,
           l_error_message TYPE c LENGTH 200,
           l_error_include TYPE sy-repid,
@@ -186,7 +188,8 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
         o_error_offset  = l_error_offset
         o_error_subrc   = l_error_subrc
       TABLES
-        i_source        = lt_source.
+        i_source        = lt_source
+        o_error_tab     = lt_errors.
 
     IF l_error_subrc <> 0.
 
@@ -295,8 +298,8 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     DATA l_response TYPE string.
 
     DATA(l_read) = abap_false.
-    DATA(l_search) = abap_true.
-    DATA(l_check) = abap_false.
+    DATA(l_search) = abap_false.
+    DATA(l_check) = abap_true.
 
     CASE abap_true.
 
@@ -319,7 +322,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
         l_response = me->syntax_check(
           EXPORTING
-            i_program_name = 'ZCHRJS00'
+            i_program_name = 'ZCL_CAR_GLOBAL================CM001'
         ).
 
     ENDCASE.
