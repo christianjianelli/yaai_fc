@@ -44,11 +44,6 @@ CLASS ycl_aai_fc_oo_class_tools DEFINITION
                 i_class_name      TYPE yde_aai_fc_oo_class_name
       RETURNING VALUE(r_response) TYPE string.
 
-    METHODS activate_2
-      IMPORTING
-                i_class_name      TYPE yde_aai_fc_oo_class_name
-      RETURNING VALUE(r_response) TYPE string.
-
     METHODS check_syntax
       IMPORTING
                 i_class_name      TYPE yde_aai_fc_oo_class_name
@@ -348,112 +343,6 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
     ENDIF.
 
     r_response = |Class { i_class_name } updated successfully!|.
-
-  ENDMETHOD.
-
-  METHOD activate_2.
-
-*    DATA: ls_request         TYPE sadt_rest_request,
-*          ls_response        TYPE sadt_rest_response,
-*          ls_exc_data        TYPE sadt_exception,
-*          ls_check_list_data TYPE if_adt_check_list=>ty_s_adt_message_list_data.
-*
-*    DATA l_payload TYPE string.
-*
-*    DATA l_langu TYPE t002-laiso.
-*
-*    DATA(l_class_name) = to_lower( condense( i_class_name ) ).
-*
-*    ls_request-request_line-method = 'GET'.
-*    ls_request-request_line-uri = |/sap/bc/adt/oo/classes/zcl_test_create_fc_03?version=workingArea|.
-*    ls_request-request_line-version = 'HTTP/1.1'.
-*
-*    ls_request-header_fields = VALUE #( ( name = 'Accept' value = 'application/vnd.sap.adt.oo.classes.v2+xml' ) ).
-*
-**    l_payload = |<adtcore:objectReferences xmlns:adtcore="http://www.sap.com/adt/core">|.
-**    l_payload = |{ l_payload }<adtcore:objectReference adtcore:uri="/sap/bc/adt/oo/classes/zcl_test_create_fc_03" adtcore:name="ZCL_TEST_CREATE_FC_03"/>|.
-**    l_payload = |{ l_payload }</adtcore:objectReferences>|.
-*
-**    ls_request-message_body = cl_abap_codepage=>convert_to( source = l_payload ).
-*
-*    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
-*      EXPORTING
-*        request  = ls_request
-*      IMPORTING
-*        response = ls_response.
-*
-*    r_response = cl_abap_codepage=>convert_from( source = ls_response-message_body ).
-
-*    IF ls_response-message_body IS NOT INITIAL.
-*
-*      TRY.
-*
-*          SELECT SINGLE laiso FROM t002 INTO @l_langu WHERE spras = @sy-langu.
-*
-*          CALL TRANSFORMATION sadt_exception
-*            SOURCE XML ls_response-message_body
-*            RESULT exception_data = ls_exc_data
-*                   langu          = l_langu.
-*
-*        CATCH cx_transformation_error ##NO_HANDLER.
-*      ENDTRY.
-*
-*      IF ls_exc_data IS INITIAL.
-*
-*        TRY.
-*
-*            CALL TRANSFORMATION st_seu_adt_check_list
-*              SOURCE XML ls_response-message_body
-*              RESULT check_list_data = ls_check_list_data.
-*
-*          CATCH cx_transformation_error ##NO_HANDLER.
-*        ENDTRY.
-*
-*      ENDIF.
-*
-*    ENDIF.
-*
-*    IF ls_exc_data-message IS NOT INITIAL.
-*
-*      r_response = ls_exc_data-message.
-*
-*    ENDIF.
-*
-*    LOOP AT ls_check_list_data-messages ASSIGNING FIELD-SYMBOL(<ls_message>).
-*
-*      r_response = |{ r_response }{ <ls_message>-objdescr }{ cl_abap_char_utilities=>newline }|.
-*
-*      me->_get_line_and_column_from_uri(
-*        EXPORTING
-*          i_uri    = <ls_message>-href
-*        IMPORTING
-*          e_line   = DATA(l_line)
-*          e_column = DATA(l_column)
-*      ).
-*
-*      IF l_line > 0.
-*        r_response = |{ r_response }Line: { l_line }{ cl_abap_char_utilities=>newline }|.
-*      ENDIF.
-*
-*      IF l_column > 0.
-*        r_response = |{ r_response }Column: { l_column }{ cl_abap_char_utilities=>newline }|.
-*      ENDIF.
-*
-*      LOOP AT <ls_message>-shorttext ASSIGNING FIELD-SYMBOL(<l_shorttext>).
-*
-*        r_response = |{ r_response }{ <l_shorttext> }{ cl_abap_char_utilities=>newline }|.
-*
-*      ENDLOOP.
-*
-*      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
-*
-*    ENDLOOP.
-*
-*    IF r_response IS NOT INITIAL.
-*      RETURN.
-*    ENDIF.
-*
-*    r_response = |Class { i_class_name } activated successfully!|.
 
   ENDMETHOD.
 
