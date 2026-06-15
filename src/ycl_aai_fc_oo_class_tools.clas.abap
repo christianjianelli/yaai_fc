@@ -39,6 +39,11 @@ CLASS ycl_aai_fc_oo_class_tools DEFINITION
                 i_short_description TYPE as4text OPTIONAL
       RETURNING VALUE(r_response)   TYPE string.
 
+    METHODS get_properties
+      IMPORTING
+                i_class_name      TYPE yde_aai_fc_oo_class_name
+      RETURNING VALUE(r_response) TYPE string.
+
     METHODS activate
       IMPORTING
                 i_class_name      TYPE yde_aai_fc_oo_class_name
@@ -254,6 +259,18 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
         r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
       ENDIF.
 
+      SELECT clsname, version
+        FROM seoclassdf
+        WHERE clsname = @<ls_tadir>-obj_name
+        INTO TABLE @DATA(lt_seoclassdf).
+
+      READ TABLE lt_seoclassdf TRANSPORTING NO FIELDS
+        WITH KEY version = '0'.
+
+      IF sy-subrc = 0.
+        DATA(l_inactive) = abap_true.
+      ENDIF.
+
       SELECT SINGLE clsname, langu, descript
         FROM seoclasstx
         INTO @DATA(ls_seoclasstx)
@@ -270,11 +287,68 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
       r_response = |{ r_response }Class: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
       r_response = |{ r_response }Description: { ls_seoclasstx-descript }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Package: { <ls_tadir>-devclass }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Original language: { <ls_tadir>-masterlang }{ cl_abap_char_utilities=>newline }|.
+
+      IF l_inactive = abap_true.
+        r_response = |{ r_response }Activation status: Inactive|.
+      ELSE.
+        r_response = |{ r_response }Activation status: Active|.
+      ENDIF.
 
     ENDLOOP.
 
     IF r_response IS INITIAL.
       r_response = |No class found in package { l_package }.|.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD get_properties.
+
+    CLEAR r_response.
+
+    DATA(l_class_name) =  to_upper( condense( i_class_name ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_class_name
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Class { l_class_name } not found.|.
+      RETURN.
+    ENDIF.
+
+    SELECT clsname, version
+      FROM seoclassdf
+      WHERE clsname = @ls_tadir-obj_name
+      INTO TABLE @DATA(lt_seoclassdf).
+
+    READ TABLE lt_seoclassdf TRANSPORTING NO FIELDS
+      WITH KEY version = '0'.
+
+    IF sy-subrc = 0.
+      DATA(l_inactive) = abap_true.
+    ENDIF.
+
+    SELECT SINGLE clsname, langu, descript
+      FROM seoclasstx
+      INTO @DATA(ls_seoclasstx)
+      WHERE clsname = @ls_tadir-obj_name
+        AND langu = @sy-langu.
+
+    r_response = |{ r_response }Class: { ls_tadir-obj_name }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Description: { ls_seoclasstx-descript }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Package: { ls_tadir-devclass }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Original language: { ls_tadir-masterlang }{ cl_abap_char_utilities=>newline }|.
+
+    IF l_inactive = abap_true.
+      r_response = |{ r_response }Activation status: Inactive|.
+    ELSE.
+      r_response = |{ r_response }Activation status: Active|.
     ENDIF.
 
   ENDMETHOD.
@@ -428,6 +502,10 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
     ENDLOOP.
 
+    IF r_response IS INITIAL.
+      r_response = |The class { i_class_name } has no syntax errors.|.
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD _deserialize_check_run_reports.
@@ -472,8 +550,8 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    ls_object-object   = 'CLAS'.
-    ls_object-obj_name = i_class_name.
+    ls_object-object   = me->mc_object.
+    ls_object-obj_name = l_class_name.
 
     APPEND ls_object TO lt_objects.
 
@@ -672,7 +750,8 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
     DATA(l_read) = abap_false.
     DATA(l_update) = abap_false.
     DATA(l_search) = abap_false.
-    DATA(l_activate) = abap_true. " <<<
+    DATA(l_get_properties) = abap_true.
+    DATA(l_activate) = abap_false.
     DATA(l_lock) = abap_false.
     DATA(l_unlock) = abap_false.
 
@@ -744,6 +823,10 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
       WHEN l_unlock.
 
         me->_unlock( 'ZCL_TEST_CREATE_FC_03' ).
+
+      WHEN l_get_properties.
+
+        l_response = me->get_properties( 'ZCL_TEST_CREATE_FC_03' ).
 
     ENDCASE.
 

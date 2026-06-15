@@ -322,7 +322,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
         l_response = me->syntax_check(
           EXPORTING
-            i_program_name = 'ZCL_CAR_GLOBAL================CM001'
+            i_program_name = 'ZCHRJS00'
         ).
 
     ENDCASE.

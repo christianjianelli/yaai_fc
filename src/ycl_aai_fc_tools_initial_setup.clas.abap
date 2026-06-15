@@ -315,6 +315,62 @@ CLASS ycl_aai_fc_tools_initial_setup IMPLEMENTATION.
                                               method_name = 'CHECK'
                                               description = 'Performs a validation check on an existing CDS view and returns any errors.' )
 
+                                            ( class_name = 'YCL_AAI_FC_OO_CLASS_TOOLS'
+                                              method_name = 'CREATE'
+                                              description = 'Creates a new ABAP class.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_CLASS_TOOLS'
+                                              method_name = 'READ'
+                                              description = 'Returns the source code of an ABAP class.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_CLASS_TOOLS'
+                                              method_name = 'SEARCH'
+                                              description = 'Returns a list of ABAP classes matching the search criteria.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_CLASS_TOOLS'
+                                              method_name = 'GET_PROPERTIES'
+                                              description = 'Returns the properties of an ABAP class.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_CLASS_TOOLS'
+                                              method_name = 'UPDATE'
+                                              description = 'Updates the source code of an existing ABAP class.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_CLASS_TOOLS'
+                                              method_name = 'ACTIVATE'
+                                              description = 'Activates an existing ABAP class.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_CLASS_TOOLS'
+                                              method_name = 'CHECK_SYNTAX'
+                                              description = 'Perform a syntax check on the source code of an existing ABAP class.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_INTERFACE_TOOLS'
+                                              method_name = 'CREATE'
+                                              description = 'Creates a new ABAP interface.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_INTERFACE_TOOLS'
+                                              method_name = 'READ'
+                                              description = 'Returns the source code of an ABAP interface.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_INTERFACE_TOOLS'
+                                              method_name = 'SEARCH'
+                                              description = 'Returns a list of ABAP interface matching the search criteria.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_INTERFACE_TOOLS'
+                                              method_name = 'GET_PROPERTIES'
+                                              description = 'Returns the properties of an ABAP interface.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_INTERFACE_TOOLS'
+                                              method_name = 'UPDATE'
+                                              description = 'Updates the source code of an existing ABAP interface.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_INTERFACE_TOOLS'
+                                              method_name = 'ACTIVATE'
+                                              description = 'Activates an existing ABAP interface.' )
+
+                                            ( class_name = 'YCL_AAI_FC_OO_INTERFACE_TOOLS'
+                                              method_name = 'CHECK_SYNTAX'
+                                              description = 'Perform a syntax check on the source code of an existing ABAP interface.' )
+
                                                 ) ).
 
     out->write( |{ sy-dbcnt } tools inserted into table yaai_tool.| ).
