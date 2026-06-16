@@ -292,9 +292,9 @@ CLASS ycl_aai_fc_oo_interface_tools IMPLEMENTATION.
       r_response = |{ r_response }Original language: { <ls_tadir>-masterlang }{ cl_abap_char_utilities=>newline }|.
 
       IF l_inactive = abap_true.
-        r_response = |{ r_response }Activation status: Inactive|.
+        r_response = |{ r_response }Activation status: Inactive{ cl_abap_char_utilities=>newline }|.
       ELSE.
-        r_response = |{ r_response }Activation status: Active|.
+        r_response = |{ r_response }Activation status: Active{ cl_abap_char_utilities=>newline }|.
       ENDIF.
 
       FREE lt_seoclassdf.
