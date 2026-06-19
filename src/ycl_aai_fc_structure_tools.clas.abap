@@ -66,13 +66,49 @@ CLASS ycl_aai_fc_structure_tools DEFINITION
                 i_structure_name TYPE yde_aai_fc_structure
       RETURNING VALUE(r_active)  TYPE abap_bool.
 
+    METHODS get_current_transport_request
+      IMPORTING
+                i_structure_name TYPE yde_aai_fc_structure
+      RETURNING VALUE(r_response) TYPE string.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
 
 
 
-CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
+CLASS YCL_AAI_FC_STRUCTURE_TOOLS IMPLEMENTATION.
+
+
+  METHOD activate.
+
+    DATA l_rc TYPE i.
+
+    CLEAR r_response.
+
+    DATA(l_structure_name) = i_structure_name.
+
+    l_structure_name = condense( to_upper( l_structure_name ) ).
+
+    CALL FUNCTION 'DDIF_TABL_ACTIVATE'
+      EXPORTING
+        name        = l_structure_name
+      IMPORTING
+        rc          = l_rc
+      EXCEPTIONS
+        not_found   = 1
+        put_failure = 2
+        OTHERS      = 3.
+
+    IF sy-subrc <> 0 OR l_rc > 4.
+      r_response = |An error occurred while activating the structure { l_structure_name }.'|.
+      RETURN.
+    ENDIF.
+
+    r_response = |Structure { l_structure_name } activated successfully.|.
+
+  ENDMETHOD.
+
 
   METHOD create.
 
@@ -252,6 +288,241 @@ CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+
+  METHOD delete.
+
+    DATA lt_objects_with_references TYPE STANDARD TABLE OF dcobjbez.
+
+    DATA l_deleted TYPE abap_bool.
+
+    CLEAR r_response.
+
+    DATA(l_structure_name) = i_structure_name.
+
+    l_structure_name = condense( to_upper( l_structure_name ) ).
+
+    SELECT tabname, as4local
+      FROM dd02l
+      INTO TABLE @DATA(lt_dd01l)
+      WHERE tabname = @l_structure_name.
+
+    IF sy-subrc <> 0.
+      r_response = |Structure { l_structure_name } not found.|.
+      RETURN.
+    ENDIF.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+
+      r_response = |The transport request { l_transport_request } is invalid.|.
+
+      RETURN.
+
+    ENDIF.
+
+    SELECT SINGLE pgmid, object, obj_name, masterlang, devclass
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_structure_name
+      INTO @DATA(ls_tadir).
+
+    CALL FUNCTION 'DDIF_OBJECT_DELETE'
+      EXPORTING
+        type                    = mc_object
+        name                    = l_structure_name
+      IMPORTING
+        deleted                 = l_deleted
+      TABLES
+        objects_with_references = lt_objects_with_references
+      EXCEPTIONS
+        illegal_input           = 1
+        no_authority            = 2
+        OTHERS                  = 3.
+
+    IF sy-subrc <> 0 OR l_deleted IS INITIAL.
+
+      r_response = |Structure { l_structure_name } was not deleted.|.
+
+      LOOP AT lt_objects_with_references ASSIGNING FIELD-SYMBOL(<ls_objects_with_references>).
+
+        IF sy-tabix = 1.
+          r_response = |{ r_response }{ cl_abap_char_utilities=>newline }The Structure { l_structure_name } is still being referenced by the following object(s):|.
+        ENDIF.
+
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Object Name: { <ls_objects_with_references>-name } Type: { <ls_objects_with_references>-type } |.
+
+      ENDLOOP.
+
+      RETURN.
+    ENDIF.
+
+    lo_cts_api->insert_object(
+      EXPORTING
+        i_s_object = VALUE #( trkorr = l_transport_request
+                              object = mc_object
+                              obj_name = l_structure_name )
+        i_object_class = 'DICT'
+        i_package = ls_tadir-devclass
+        i_language = sy-langu
+      IMPORTING
+        e_inserted = DATA(l_inserted)
+    ).
+
+    IF l_inserted = abap_false.
+      r_response = |{ r_response }Structure { l_structure_name } deleted but it was not possible to add it to the transport request { l_transport_request }.|.
+    ENDIF.
+
+    IF r_response IS INITIAL.
+      r_response = |Structure { l_structure_name } was deleted successfully.|.
+    ELSE.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Structure { l_structure_name } was deleted.|.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD exists.
+
+    SELECT SINGLE @abap_true
+      FROM dd02l
+      INTO @r_exists
+      WHERE tabname = @i_structure_name.
+
+  ENDMETHOD.
+
+
+  METHOD get_current_transport_request.
+
+    DATA(l_structure_name) = i_structure_name.
+
+    l_structure_name = condense( to_upper( l_structure_name ) ).
+
+    NEW ycl_aai_fc_cts_api( )->get_current_transport_request(
+      EXPORTING
+        i_object_name       = l_structure_name
+        i_pgmid             = mc_pgmid
+        i_object            = mc_object
+      IMPORTING
+        e_transport_request = DATA(l_transport_request)
+    ).
+
+    r_response = l_transport_request.
+
+  ENDMETHOD.
+
+
+  METHOD if_oo_adt_classrun~main.
+
+    DATA l_response TYPE string.
+
+    DATA(l_create) = abap_false.
+    DATA(l_read) = abap_true.
+    DATA(l_search) = abap_false.
+    DATA(l_update) = abap_false.
+    DATA(l_delete) = abap_false.
+
+
+    CASE abap_true.
+
+      WHEN l_create.
+
+        l_response = me->create(
+                       i_structure_name    = 'ZST_TEST_DDIF_TABL_PUT1'
+                       i_short_description = 'Test Structure Create tool'
+                       i_transport_request = 'NPLK900132'
+                       i_package           = 'Z001'
+                       i_t_components      = VALUE #( ( field_name = 'FIELD1' data_type = 'CHAR' length = '10' )
+                                                      ( field_name = 'FIELD2' data_type = 'STRING' )
+                                                      ( field_name = 'VAL' data_type = 'CURR' length = '13' decimals = '2' ref_field = 'CURRENCY' )
+                                                      ( field_name = 'CURRENCY' data_element = 'WAERS' ) )
+                     ).
+
+      WHEN l_read.
+
+        l_response = me->read( 'YST_AAI_FC_STRUCT_FIELDS' ).
+
+      WHEN l_search.
+
+        l_response = me->search(
+                       i_package           = 'YAAI_FC'
+*                       i_structure_name    =
+*                       i_short_description =
+                     ).
+
+      WHEN l_update.
+
+        l_response = me->update(
+                       i_structure_name    = 'ZST_TEST_DDIF_TABL_PUT1'
+                       i_short_description = 'Test Structure Create tool'
+                       i_transport_request = 'NPLK900132'
+                       i_t_components      = VALUE #( ( field_name = 'DOCID' data_type = 'CHAR' length = '10' )
+                                                      ( field_name = 'TOTAMT' data_type = 'CURR' length = '13' decimals = '2' ref_field = 'CURCY' )
+                                                      ( field_name = 'CURCY' data_element = 'WAERS' ) )
+                     ).
+
+      WHEN l_delete.
+
+        l_response = me->delete(
+                       i_structure_name    = 'ZST_TEST_DDIF_TABL_PUT'
+                       i_transport_request = 'NPLK900132'
+                     ).
+
+    ENDCASE.
+
+    out->write( l_response ).
+
+  ENDMETHOD.
+
+
+  METHOD is_active.
+
+    SELECT SINGLE @abap_true
+      FROM dd02l
+      INTO @r_active
+      WHERE tabname = @i_structure_name
+        AND as4local = 'A'.
+
+  ENDMETHOD.
+
+
+  METHOD is_locked.
+
+    DATA: lt_lock_entries TYPE STANDARD TABLE OF seqg3.
+
+    DATA: l_argument TYPE seqg3-garg.
+
+    r_locked = abap_false.
+
+    l_argument = |{ mc_object }{ i_structure_name }|.
+
+    CALL FUNCTION 'ENQUEUE_READ'
+      EXPORTING
+        guname                = '*'
+        garg                  = l_argument
+      TABLES
+        enq                   = lt_lock_entries
+      EXCEPTIONS
+        communication_failure = 0
+        system_failure        = 0
+        OTHERS                = 0.
+
+    READ TABLE lt_lock_entries
+      TRANSPORTING NO FIELDS
+      WITH KEY gobj = 'ESDICT'.
+
+    IF sy-subrc = 0.
+      r_locked = abap_true.
+    ENDIF.
+
+  ENDMETHOD.
+
+
   METHOD read.
 
     DATA lt_structure_fields TYPE STANDARD TABLE OF dd03p.
@@ -310,9 +581,16 @@ CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    DATA(l_current_transport_request) = me->get_current_transport_request( l_structure_name ).
+
     r_response = |Structure: { l_structure_name }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_structure-ddtext }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Package: { ls_tadir-devclass }|.
+
+    IF l_current_transport_request IS NOT INITIAL.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Transport Request: { l_current_transport_request }|.
+    ENDIF.
+
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Fields:|.
 
     LOOP AT lt_structure_fields ASSIGNING FIELD-SYMBOL(<ls_structure_field>).
@@ -341,6 +619,7 @@ CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
     ENDLOOP.
 
   ENDMETHOD.
+
 
   METHOD search.
 
@@ -407,6 +686,7 @@ CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
+
 
   METHOD update.
 
@@ -582,243 +862,4 @@ CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
-
-  METHOD delete.
-
-    DATA lt_objects_with_references TYPE STANDARD TABLE OF dcobjbez.
-
-    DATA l_deleted TYPE abap_bool.
-
-    CLEAR r_response.
-
-    DATA(l_structure_name) = i_structure_name.
-
-    l_structure_name = condense( to_upper( l_structure_name ) ).
-
-    SELECT tabname, as4local
-      FROM dd02l
-      INTO TABLE @DATA(lt_dd01l)
-      WHERE tabname = @l_structure_name.
-
-    IF sy-subrc <> 0.
-      r_response = |Structure { l_structure_name } not found.|.
-      RETURN.
-    ENDIF.
-
-    DATA(l_transport_request) = i_transport_request.
-
-    l_transport_request = condense( to_upper( l_transport_request ) ).
-
-    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
-
-    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
-
-      r_response = |The transport request { l_transport_request } is invalid.|.
-
-      RETURN.
-
-    ENDIF.
-
-    SELECT SINGLE pgmid, object, obj_name, masterlang, devclass
-      FROM tadir
-      WHERE pgmid = @mc_pgmid
-        AND object = @mc_object
-        AND obj_name = @l_structure_name
-      INTO @DATA(ls_tadir).
-
-    CALL FUNCTION 'DDIF_OBJECT_DELETE'
-      EXPORTING
-        type                    = mc_object
-        name                    = l_structure_name
-      IMPORTING
-        deleted                 = l_deleted
-      TABLES
-        objects_with_references = lt_objects_with_references
-      EXCEPTIONS
-        illegal_input           = 1
-        no_authority            = 2
-        OTHERS                  = 3.
-
-    IF sy-subrc <> 0 OR l_deleted IS INITIAL.
-
-      r_response = |Structure { l_structure_name } was not deleted.|.
-
-      LOOP AT lt_objects_with_references ASSIGNING FIELD-SYMBOL(<ls_objects_with_references>).
-
-        IF sy-tabix = 1.
-          r_response = |{ r_response }{ cl_abap_char_utilities=>newline }The Structure { l_structure_name } is still being referenced by the following object(s):|.
-        ENDIF.
-
-        r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Object Name: { <ls_objects_with_references>-name } Type: { <ls_objects_with_references>-type } |.
-
-      ENDLOOP.
-
-      RETURN.
-    ENDIF.
-
-    lo_cts_api->insert_object(
-      EXPORTING
-        i_s_object = VALUE #( trkorr = l_transport_request
-                              object = mc_object
-                              obj_name = l_structure_name )
-        i_object_class = 'DICT'
-        i_package = ls_tadir-devclass
-        i_language = sy-langu
-      IMPORTING
-        e_inserted = DATA(l_inserted)
-    ).
-
-    IF l_inserted = abap_false.
-      r_response = |{ r_response }Structure { l_structure_name } deleted but it was not possible to add it to the transport request { l_transport_request }.|.
-    ENDIF.
-
-    IF r_response IS INITIAL.
-      r_response = |Structure { l_structure_name } was deleted successfully.|.
-    ELSE.
-      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Structure { l_structure_name } was deleted.|.
-    ENDIF.
-
-  ENDMETHOD.
-
-  METHOD activate.
-
-    DATA l_rc TYPE i.
-
-    CLEAR r_response.
-
-    DATA(l_structure_name) = i_structure_name.
-
-    l_structure_name = condense( to_upper( l_structure_name ) ).
-
-    CALL FUNCTION 'DDIF_TABL_ACTIVATE'
-      EXPORTING
-        name        = l_structure_name
-      IMPORTING
-        rc          = l_rc
-      EXCEPTIONS
-        not_found   = 1
-        put_failure = 2
-        OTHERS      = 3.
-
-    IF sy-subrc <> 0 OR l_rc > 4.
-      r_response = |An error occurred while activating the structure { l_structure_name }.'|.
-      RETURN.
-    ENDIF.
-
-    r_response = |Structure { l_structure_name } activated successfully.|.
-
-  ENDMETHOD.
-
-  METHOD exists.
-
-    SELECT SINGLE @abap_true
-      FROM dd02l
-      INTO @r_exists
-      WHERE tabname = @i_structure_name.
-
-  ENDMETHOD.
-
-  METHOD is_active.
-
-    SELECT SINGLE @abap_true
-      FROM dd02l
-      INTO @r_active
-      WHERE tabname = @i_structure_name
-        AND as4local = 'A'.
-
-  ENDMETHOD.
-
-  METHOD is_locked.
-
-    DATA: lt_lock_entries TYPE STANDARD TABLE OF seqg3.
-
-    DATA: l_argument TYPE seqg3-garg.
-
-    r_locked = abap_false.
-
-    l_argument = |{ mc_object }{ i_structure_name }|.
-
-    CALL FUNCTION 'ENQUEUE_READ'
-      EXPORTING
-        guname                = '*'
-        garg                  = l_argument
-      TABLES
-        enq                   = lt_lock_entries
-      EXCEPTIONS
-        communication_failure = 0
-        system_failure        = 0
-        OTHERS                = 0.
-
-    READ TABLE lt_lock_entries
-      TRANSPORTING NO FIELDS
-      WITH KEY gobj = 'ESDICT'.
-
-    IF sy-subrc = 0.
-      r_locked = abap_true.
-    ENDIF.
-
-  ENDMETHOD.
-
-  METHOD if_oo_adt_classrun~main.
-
-    DATA l_response TYPE string.
-
-    DATA(l_create) = abap_false.
-    DATA(l_read) = abap_false.
-    DATA(l_search) = abap_false.
-    DATA(l_update) = abap_false.
-    DATA(l_delete) = abap_true.
-
-
-    CASE abap_true.
-
-      WHEN l_create.
-
-        l_response = me->create(
-                       i_structure_name    = 'ZST_TEST_DDIF_TABL_PUT1'
-                       i_short_description = 'Test Structure Create tool'
-                       i_transport_request = 'NPLK900132'
-                       i_package           = 'Z001'
-                       i_t_components      = VALUE #( ( field_name = 'FIELD1' data_type = 'CHAR' length = '10' )
-                                                      ( field_name = 'FIELD2' data_type = 'STRING' )
-                                                      ( field_name = 'VAL' data_type = 'CURR' length = '13' decimals = '2' ref_field = 'CURRENCY' )
-                                                      ( field_name = 'CURRENCY' data_element = 'WAERS' ) )
-                     ).
-
-      WHEN l_read.
-
-        l_response = me->read( 'ZST_TEST_DDIF_TABL_PUT1' ).
-
-      WHEN l_search.
-
-        l_response = me->search(
-                       i_package           = 'YAAI_FC'
-*                       i_structure_name    =
-*                       i_short_description =
-                     ).
-
-      WHEN l_update.
-
-        l_response = me->update(
-                       i_structure_name    = 'ZST_TEST_DDIF_TABL_PUT1'
-                       i_short_description = 'Test Structure Create tool'
-                       i_transport_request = 'NPLK900132'
-                       i_t_components      = VALUE #( ( field_name = 'DOCID' data_type = 'CHAR' length = '10' )
-                                                      ( field_name = 'TOTAMT' data_type = 'CURR' length = '13' decimals = '2' ref_field = 'CURCY' )
-                                                      ( field_name = 'CURCY' data_element = 'WAERS' ) )
-                     ).
-
-      WHEN l_delete.
-
-        l_response = me->delete(
-                       i_structure_name    = 'ZST_TEST_DDIF_TABL_PUT'
-                       i_transport_request = 'NPLK900132'
-                     ).
-
-    ENDCASE.
-
-    out->write( l_response ).
-
-  ENDMETHOD.
-
 ENDCLASS.

@@ -88,6 +88,11 @@ CLASS ycl_aai_fc_domain_tools DEFINITION
                 i_domain_name   TYPE yde_aai_fc_domain
       RETURNING VALUE(r_active) TYPE abap_bool.
 
+    METHODS get_current_transport_request
+      IMPORTING
+                i_domain_name     TYPE yde_aai_fc_domain
+      RETURNING VALUE(r_response) TYPE string.
+
   PROTECTED SECTION.
 
   PRIVATE SECTION.
@@ -319,10 +324,18 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    r_response = |Domain: { l_domain_name }{ cl_abap_char_utilities=>newline }|.
-    r_response = |{ r_response }Description: { ls_domain-ddtext }{ cl_abap_char_utilities=>newline }|.
-    r_response = |{ r_response }Type: { ls_domain-datatype }{ cl_abap_char_utilities=>newline }|.
-    r_response = |{ r_response }Length: { ls_domain-leng ALPHA = OUT }|.
+    DATA(l_current_transport_request) = me->get_current_transport_request( l_domain_name ).
+
+    r_response = |Domain: { l_domain_name }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_domain-ddtext }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Package: { ls_tadir-devclass }|.
+
+    IF l_current_transport_request IS NOT INITIAL.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Transport Request: { l_current_transport_request }|.
+    ENDIF.
+
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Type: { ls_domain-datatype }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Length: { ls_domain-leng ALPHA = OUT }|.
 
     IF ls_domain-datatype = 'DEC' OR ls_domain-datatype = 'QUAN' OR ls_domain-datatype = 'CURR'.
       r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Decimals: { ls_domain-decimals ALPHA = OUT }|.
@@ -337,7 +350,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
     ENDIF.
 
     LOOP AT lt_fixed_values ASSIGNING FIELD-SYMBOL(<ls_fixed_values>).
-      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Value:{ <ls_fixed_values>-domvalue_l } Text:{ <ls_fixed_values>-ddtext }|.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } Value: { <ls_fixed_values>-domvalue_l } { cl_abap_char_utilities=>newline } Short Description: { <ls_fixed_values>-ddtext }|.
     ENDLOOP.
 
   ENDMETHOD.
@@ -1027,15 +1040,34 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD get_current_transport_request.
+
+    DATA(l_domain_name) = i_domain_name.
+
+    l_domain_name = condense( to_upper( l_domain_name ) ).
+
+    NEW ycl_aai_fc_cts_api( )->get_current_transport_request(
+      EXPORTING
+        i_object_name       = l_domain_name
+        i_pgmid             = mc_pgmid
+        i_object            = mc_object
+      IMPORTING
+        e_transport_request = DATA(l_transport_request)
+    ).
+
+    r_response = l_transport_request.
+
+  ENDMETHOD.
+
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_false.
+    DATA(l_read) = abap_true.
     DATA(l_update) = abap_false.
     DATA(l_search) = abap_false.
-    DATA(l_delete) = abap_true.
+    DATA(l_delete) = abap_false.
     DATA(l_get_translation) = abap_false.
     DATA(l_set_translation) = abap_false.
 

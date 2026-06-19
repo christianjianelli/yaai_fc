@@ -50,6 +50,11 @@ CLASS ycl_aai_fc_cds_tools DEFINITION
                 i_name            TYPE yde_aai_fc_cds_view
       RETURNING VALUE(r_response) TYPE string.
 
+    METHODS get_current_transport_request
+      IMPORTING
+                i_name            TYPE yde_aai_fc_cds_view
+      RETURNING VALUE(r_response) TYPE string.
+
   PROTECTED SECTION.
 
   PRIVATE SECTION.
@@ -467,6 +472,25 @@ CLASS ycl_aai_fc_cds_tools IMPLEMENTATION.
     ENDTRY.
 
     r_response = |CDS view { l_name } deleted successfully.|.
+
+  ENDMETHOD.
+
+  METHOD get_current_transport_request.
+
+    DATA(l_cds_view_name) = i_name.
+
+    l_cds_view_name = condense( to_upper( l_cds_view_name ) ).
+
+    NEW ycl_aai_fc_cts_api( )->get_current_transport_request(
+      EXPORTING
+        i_object_name       = l_cds_view_name
+        i_pgmid             = mc_pgmid
+        i_object            = mc_object
+      IMPORTING
+        e_transport_request = DATA(l_transport_request)
+    ).
+
+    r_response = l_transport_request.
 
   ENDMETHOD.
 

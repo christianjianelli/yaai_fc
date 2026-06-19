@@ -66,6 +66,14 @@ CLASS ycl_aai_fc_cts_api DEFINITION
         e_task_released     TYPE abap_bool
         e_error             TYPE string.
 
+    METHODS get_current_transport_request
+      IMPORTING
+        i_object_name       TYPE csequence
+        i_pgmid             TYPE e071-pgmid
+        i_object            TYPE e071-object
+      EXPORTING
+        e_transport_request TYPE trkorr.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -82,7 +90,7 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
 
         r_transport_request = NEW cl_cts_rest_api_impl( )->if_cts_rest_api~create_request(
           EXPORTING
-            iv_description      = CONV #( i_description )         " Short Description of Repository Objects
+            iv_description      = i_description                   " Short Description of Repository Objects
             iv_request_category = i_request_category              " Type of Request/Task
             it_users            = VALUE #( ( user = sy-uname      " Tasks for Users
                                              type = 'S' ) ) ).
@@ -355,6 +363,42 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD get_current_transport_request.
+
+    " Get current transport request from task assignment
+    SELECT a~trkorr, a~pgmid, a~object, a~obj_name, b~trfunction, b~strkorr, c~trkorr AS transport_request
+      FROM e071 AS a
+      INNER JOIN e070 AS b
+      ON a~trkorr = b~trkorr
+      INNER JOIN e070 AS c
+      ON b~strkorr = c~trkorr
+      WHERE a~pgmid = @i_pgmid
+        AND a~object = @i_object
+        AND a~obj_name = @i_object_name
+        AND c~trstatus = 'D'
+      INTO TABLE @DATA(lt_transport_request).
+
+    IF lt_transport_request IS NOT INITIAL.
+
+      e_transport_request = lt_transport_request[ 1 ]-transport_request.
+
+      RETURN.
+
+    ENDIF.
+
+    " Get current transport request from direct transport request assignment
+    SELECT a~trkorr, a~pgmid, a~object, a~obj_name, b~trfunction, b~strkorr, b~trkorr AS transport_request
+      FROM e071 AS a
+      INNER JOIN e070 AS b
+      ON a~trkorr = b~trkorr
+      WHERE a~pgmid = @i_pgmid
+        AND a~object = @i_object
+        AND a~obj_name = @i_object_name
+        AND b~trstatus = 'D'
+      INTO TABLE @lt_transport_request.
+
+  ENDMETHOD.
+
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
@@ -363,7 +407,8 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
     DATA(l_read) = abap_false.
     DATA(l_add_object) = abap_false.
     DATA(l_sort_and_compress) = abap_false.
-    DATA(l_release)  = abap_true.
+    DATA(l_release)  = abap_false.
+    DATA(l_get_current_transp_request) = abap_true.
 
     CASE abap_true.
 
@@ -441,6 +486,30 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
           l_response = 'Transport request/task NPLK900144 release failed.'.
           l_response = |{ l_response }{ cl_abap_char_utilities=>newline }{ l_error }|.
         ENDIF.
+
+      WHEN l_get_current_transp_request.
+
+        me->get_current_transport_request(
+          EXPORTING
+            i_object_name       = 'YDE_AAI_TASK_STATUS'
+            i_pgmid             = 'R3TR'
+            i_object            = 'DTEL'
+          IMPORTING
+            e_transport_request = l_transport_request
+        ).
+
+        out->write( l_transport_request ).
+
+        me->get_current_transport_request(
+          EXPORTING
+            i_object_name       = 'ZDE_TEST_DDIF_DTEL_PUT3'
+            i_pgmid             = 'LANG'
+            i_object            = 'DTED'
+          IMPORTING
+            e_transport_request = l_transport_request
+        ).
+
+        out->write( l_transport_request ).
 
     ENDCASE.
 

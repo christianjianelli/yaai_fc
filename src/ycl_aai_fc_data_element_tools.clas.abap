@@ -97,6 +97,11 @@ CLASS ycl_aai_fc_data_element_tools DEFINITION
                 i_data_element_name TYPE yde_aai_fc_data_element
       RETURNING VALUE(r_active)     TYPE abap_bool.
 
+    METHODS get_current_transport_request
+      IMPORTING
+                i_data_element_name TYPE yde_aai_fc_data_element
+      RETURNING VALUE(r_response) TYPE string.
+
   PROTECTED SECTION.
 
   PRIVATE SECTION.
@@ -324,12 +329,20 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    DATA(l_current_transport_request) = me->get_current_transport_request( l_data_element ).
+
     r_response = |Data Element Name: { l_data_element }{ cl_abap_char_utilities=>newline }|.
     r_response = |{ r_response }Description: { ls_data_element-ddtext }{ cl_abap_char_utilities=>newline }|.
-    r_response = |{ r_response }Label short: { ls_data_element-scrtext_s }{ cl_abap_char_utilities=>newline }|.
-    r_response = |{ r_response }Label medium: { ls_data_element-scrtext_m }{ cl_abap_char_utilities=>newline }|.
-    r_response = |{ r_response }Label long: { ls_data_element-scrtext_l }{ cl_abap_char_utilities=>newline }|.
-    r_response = |{ r_response }Label heading: { ls_data_element-reptext }|.
+    r_response = |{ r_response }Package: { ls_tadir-devclass }{ cl_abap_char_utilities=>newline }|.
+
+    IF l_current_transport_request IS NOT INITIAL.
+      r_response = |{ r_response }Transport Request: { l_current_transport_request }{ cl_abap_char_utilities=>newline }|.
+    ENDIF.
+
+    r_response = |{ r_response }Label Short: { ls_data_element-scrtext_s }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Label Medium: { ls_data_element-scrtext_m }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Label Long: { ls_data_element-scrtext_l }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Label Heading: { ls_data_element-reptext }|.
 
     IF ls_data_element-domname IS NOT INITIAL.
       r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Domain Name: { ls_data_element-domname }|.
@@ -945,14 +958,33 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD get_current_transport_request.
+
+    DATA(l_data_element) = i_data_element_name.
+
+    l_data_element = condense( to_upper( l_data_element ) ).
+
+    NEW ycl_aai_fc_cts_api( )->get_current_transport_request(
+      EXPORTING
+        i_object_name       = l_data_element
+        i_pgmid             = mc_pgmid
+        i_object            = mc_object
+      IMPORTING
+        e_transport_request = DATA(l_transport_request)
+    ).
+
+    r_response = l_transport_request.
+
+  ENDMETHOD.
+
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_false.
+    DATA(l_read) = abap_true.
     DATA(l_search) = abap_false.
-    DATA(l_delete) = abap_true.
+    DATA(l_delete) = abap_false.
     DATA(l_get_translation) = abap_false.
     DATA(l_set_translation) = abap_false.
 

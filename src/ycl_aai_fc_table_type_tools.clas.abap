@@ -65,6 +65,11 @@ CLASS ycl_aai_fc_table_type_tools DEFINITION
                 i_table_type_name TYPE yde_aai_fc_table_type
       RETURNING VALUE(r_active)   TYPE abap_bool.
 
+    METHODS get_current_transport_request
+      IMPORTING
+                i_table_type_name TYPE yde_aai_fc_table_type
+      RETURNING VALUE(r_response) TYPE string.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -266,8 +271,16 @@ CLASS ycl_aai_fc_table_type_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    DATA(l_current_transport_request) = me->get_current_transport_request( l_table_type_name ).
+
     r_response = |Table Type: { l_table_type_name }{ cl_abap_char_utilities=>newline }|.
     r_response = |{ r_response }Description: { ls_table_type-ddtext }{ cl_abap_char_utilities=>newline }|.
+    r_response = |{ r_response }Package: { ls_tadir-devclass }{ cl_abap_char_utilities=>newline }|.
+
+    IF l_current_transport_request IS NOT INITIAL.
+      r_response = |{ r_response }Transport Request: { l_current_transport_request }{ cl_abap_char_utilities=>newline }|.
+    ENDIF.
+
     r_response = |{ r_response }Line Type: { ls_table_type-rowtype }{ cl_abap_char_utilities=>newline }|.
 
 
@@ -687,15 +700,34 @@ CLASS ycl_aai_fc_table_type_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD get_current_transport_request.
+
+    DATA(l_table_type_name) = i_table_type_name.
+
+    l_table_type_name = condense( to_upper( l_table_type_name ) ).
+
+    NEW ycl_aai_fc_cts_api( )->get_current_transport_request(
+      EXPORTING
+        i_object_name       = l_table_type_name
+        i_pgmid             = mc_pgmid
+        i_object            = mc_object
+      IMPORTING
+        e_transport_request = DATA(l_transport_request)
+    ).
+
+    r_response = l_transport_request.
+
+  ENDMETHOD.
+
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_false.
+    DATA(l_read) = abap_true.
     DATA(l_update) = abap_false.
     DATA(l_search) = abap_false.
-    DATA(l_delete) = abap_true.
+    DATA(l_delete) = abap_false.
 
     CASE abap_true.
 

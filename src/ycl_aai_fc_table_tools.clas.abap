@@ -72,6 +72,11 @@ CLASS ycl_aai_fc_table_tools DEFINITION
                 i_table_name    TYPE yde_aai_fc_database_table
       RETURNING VALUE(r_active) TYPE abap_bool.
 
+    METHODS get_current_transport_request
+      IMPORTING
+                i_table_name      TYPE yde_aai_fc_database_table
+      RETURNING VALUE(r_response) TYPE string.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -394,9 +399,16 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    DATA(l_current_transport_request) = me->get_current_transport_request( l_table_name ).
+
     r_response = |Table: { l_table_name }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_table-ddtext }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Package: { ls_tadir-devclass }|.
+
+    IF l_current_transport_request IS NOT INITIAL.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Transport Request: { l_current_transport_request }|.
+    ENDIF.
+
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Delivery Class: { ls_table-contflag }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Data Class: { ls_tech_settings-tabart }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Size Category: { ls_tech_settings-tabkat }|.
@@ -906,12 +918,31 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD get_current_transport_request.
+
+    DATA(l_table_name) = i_table_name.
+
+    l_table_name = condense( to_upper( l_table_name ) ).
+
+    NEW ycl_aai_fc_cts_api( )->get_current_transport_request(
+      EXPORTING
+        i_object_name       = l_table_name
+        i_pgmid             = mc_pgmid
+        i_object            = mc_object
+      IMPORTING
+        e_transport_request = DATA(l_transport_request)
+    ).
+
+    r_response = l_transport_request.
+
+  ENDMETHOD.
+
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
 
-    DATA(l_create) = abap_true.
-    DATA(l_read) = abap_false.
+    DATA(l_create) = abap_false.
+    DATA(l_read) = abap_true.
     DATA(l_search) = abap_false.
     DATA(l_update) = abap_false.
     DATA(l_delete) = abap_false.

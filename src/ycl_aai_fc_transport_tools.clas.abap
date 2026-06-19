@@ -51,7 +51,36 @@ ENDCLASS.
 
 
 
-CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
+CLASS YCL_AAI_FC_TRANSPORT_TOOLS IMPLEMENTATION.
+
+
+  METHOD change_description.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+      r_response = |The transport request { l_transport_request } is invalid.|.
+      RETURN.
+    ENDIF.
+
+    DATA(l_success) = lo_cts_api->change_request_description(
+      EXPORTING
+        i_transport_request = l_transport_request
+        i_description       = CONV #( i_description )
+    ).
+
+    IF l_success = abap_true.
+      r_response = |Transport request { l_transport_request } description changed.|.
+    ELSE.
+      r_response = |Transport request { l_transport_request } description not changed.|.
+    ENDIF.
+
+  ENDMETHOD.
+
 
   METHOD create.
 
@@ -69,13 +98,13 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
 
         l_transport_request = lo_cts_api->create(
           EXPORTING
-            i_description = CONV #( i_description )
+            i_description = i_description
         ).
 
       WHEN mc_customizing.
 
         l_transport_request = lo_cts_api->create(
-                                i_description = CONV #( i_description )
+                                i_description = i_description
                                 i_request_category = 'W'
                               ).
 
@@ -83,7 +112,7 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
 
         l_transport_request = lo_cts_api->create(
           EXPORTING
-            i_description = CONV #( i_description )
+            i_description = i_description
         ).
 
     ENDCASE.
@@ -96,6 +125,47 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
     r_response = |Transport request { l_transport_request } created successfully|.
 
   ENDMETHOD.
+
+  METHOD if_oo_adt_classrun~main.
+
+    DATA l_response TYPE string.
+
+    DATA(l_create) = abap_false.
+    DATA(l_read) = abap_false.
+    DATA(l_search) = abap_true.
+
+    CASE abap_true.
+
+      WHEN l_create.
+
+        l_response = me->create(
+          EXPORTING
+            i_description = 'Test customizing request tool'
+            i_request_category = 'C'
+        ).
+
+      WHEN l_search.
+
+        l_response = me->search(
+*                       i_username            =
+                       i_modifiable          = abap_true
+                       i_released            = abap_false
+                       i_workbench           = abap_true
+                       i_customizing         = abap_false
+                       i_transport_of_copies = abap_false
+*                       i_description         =
+                     ).
+
+      WHEN l_read.
+
+        l_response = me->read( 'NPLK900129' ).
+
+    ENDCASE.
+
+    out->write( l_response ).
+
+  ENDMETHOD.
+
 
   METHOD read.
 
@@ -135,6 +205,39 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
     ENDLOOP.
 
   ENDMETHOD.
+
+
+  METHOD release.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+      r_response = |The transport request { l_transport_request } is invalid.|.
+      RETURN.
+    ENDIF.
+
+    lo_cts_api->release(
+      EXPORTING
+        i_transport_request    = l_transport_request
+        i_test_mode            = abap_false
+        i_ignore_locks         = abap_true
+      IMPORTING
+        e_released             = DATA(l_released)
+        e_error                = DATA(l_error)
+    ).
+
+    IF l_released = abap_true.
+      r_response = |Transport request { l_transport_request } released.|.
+    ELSE.
+      r_response = |Transport request { l_transport_request } not released. Error: { l_error }.|.
+    ENDIF.
+
+  ENDMETHOD.
+
 
   METHOD search.
 
@@ -230,103 +333,4 @@ CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
     r_response = 'Here is the list of the modifiable transport requests found:' && r_response.
 
   ENDMETHOD.
-
-  METHOD change_description.
-
-    DATA(l_transport_request) = i_transport_request.
-
-    l_transport_request = condense( to_upper( l_transport_request ) ).
-
-    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
-
-    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
-      r_response = |The transport request { l_transport_request } is invalid.|.
-      RETURN.
-    ENDIF.
-
-    DATA(l_success) = lo_cts_api->change_request_description(
-      EXPORTING
-        i_transport_request = l_transport_request
-        i_description       = CONV #( i_description )
-    ).
-
-    IF l_success = abap_true.
-      r_response = |Transport request { l_transport_request } description changed.|.
-    ELSE.
-      r_response = |Transport request { l_transport_request } description not changed.|.
-    ENDIF.
-
-  ENDMETHOD.
-
-  METHOD release.
-
-    DATA(l_transport_request) = i_transport_request.
-
-    l_transport_request = condense( to_upper( l_transport_request ) ).
-
-    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
-
-    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
-      r_response = |The transport request { l_transport_request } is invalid.|.
-      RETURN.
-    ENDIF.
-
-    lo_cts_api->release(
-      EXPORTING
-        i_transport_request    = l_transport_request
-        i_test_mode            = abap_false
-        i_ignore_locks         = abap_true
-      IMPORTING
-        e_released             = DATA(l_released)
-        e_error                = DATA(l_error)
-    ).
-
-    IF l_released = abap_true.
-      r_response = |Transport request { l_transport_request } released.|.
-    ELSE.
-      r_response = |Transport request { l_transport_request } not released. Error: { l_error }.|.
-    ENDIF.
-
-  ENDMETHOD.
-
-  METHOD if_oo_adt_classrun~main.
-
-    DATA l_response TYPE string.
-
-    DATA(l_create) = abap_false.
-    DATA(l_read) = abap_false.
-    DATA(l_search) = abap_true.
-
-    CASE abap_true.
-
-      WHEN l_create.
-
-        l_response = me->create(
-          EXPORTING
-            i_description = 'Test customizing request tool'
-            i_request_category = 'C'
-        ).
-
-      WHEN l_search.
-
-        l_response = me->search(
-*                       i_username            =
-                       i_modifiable          = abap_true
-                       i_released            = abap_false
-                       i_workbench           = abap_true
-                       i_customizing         = abap_false
-                       i_transport_of_copies = abap_false
-*                       i_description         =
-                     ).
-
-      WHEN l_read.
-
-        l_response = me->read( 'NPLK900129' ).
-
-    ENDCASE.
-
-    out->write( l_response ).
-
-  ENDMETHOD.
-
 ENDCLASS.
