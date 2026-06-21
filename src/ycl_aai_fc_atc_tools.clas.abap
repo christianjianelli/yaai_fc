@@ -234,13 +234,13 @@ CLASS ycl_aai_fc_atc_tools IMPLEMENTATION.
       FROM satc_ac_resulth
      WHERE scheduled_by = @sy-uname
        AND title = @l_transport_request
-      ORDER BY scheduled_on_ts
-      INTO TABLE @DATA(lt_atc_ac_result).
+      INTO TABLE @DATA(lt_atc_ac_result).               "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
-
       RETURN.
     ENDIF.
+
+    SORT lt_atc_ac_result BY scheduled_on_ts.
 
     DATA(l_result_id) = lt_atc_ac_result[ lines( lt_atc_ac_result ) ]-display_id.
 

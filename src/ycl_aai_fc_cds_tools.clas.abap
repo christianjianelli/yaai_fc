@@ -282,7 +282,7 @@ CLASS ycl_aai_fc_cds_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir).
+      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No CDS view found.|.

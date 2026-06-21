@@ -115,6 +115,23 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
 
     l_domain_name = condense( to_upper( l_domain_name ) ).
 
+    IF l_domain_name IS INITIAL.
+      r_response = |The domain name is mandatory.|.
+      RETURN.
+    ENDIF.
+
+    SELECT SINGLE @abap_true
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_domain_name
+      INTO @DATA(l_exists).
+
+    IF sy-subrc = 0.
+      r_response = |The domain { l_domain_name } already exists.|.
+      RETURN.
+    ENDIF.
+
     DATA(l_transport_request) = i_transport_request.
 
     l_transport_request = condense( to_upper( l_transport_request ) ).
@@ -684,7 +701,7 @@ CLASS ycl_aai_fc_domain_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir).
+      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No domain found.|.

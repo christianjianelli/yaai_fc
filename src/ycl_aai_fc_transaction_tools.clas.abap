@@ -131,7 +131,7 @@ CLASS ycl_aai_fc_transaction_tools IMPLEMENTATION.
       ON a~tcode = b~tcode
       AND b~sprsl = @sy-langu
       WHERE a~tcode = @l_transaction
-      INTO TABLE @DATA(lt_transaction).
+      INTO TABLE @DATA(lt_transaction). "#EC CI_BUFFJOIN
 
     IF sy-subrc <> 0.
       r_response = |Transaction { l_transaction } not found.|.
@@ -173,7 +173,7 @@ CLASS ycl_aai_fc_transaction_tools IMPLEMENTATION.
       ON a~tcode = b~tcode
       AND b~sprsl = @sy-langu
       WHERE a~tcode = @l_transaction
-      INTO TABLE @DATA(lt_transaction).
+      INTO TABLE @DATA(lt_transaction). "#EC CI_BUFFJOIN
 
     IF sy-subrc <> 0.
       r_response = |No transaction found.|.

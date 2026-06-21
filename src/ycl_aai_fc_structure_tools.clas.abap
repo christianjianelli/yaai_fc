@@ -68,7 +68,7 @@ CLASS ycl_aai_fc_structure_tools DEFINITION
 
     METHODS get_current_transport_request
       IMPORTING
-                i_structure_name TYPE yde_aai_fc_structure
+                i_structure_name  TYPE yde_aai_fc_structure
       RETURNING VALUE(r_response) TYPE string.
 
   PROTECTED SECTION.
@@ -77,7 +77,7 @@ ENDCLASS.
 
 
 
-CLASS YCL_AAI_FC_STRUCTURE_TOOLS IMPLEMENTATION.
+CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
 
 
   METHOD activate.
@@ -121,6 +121,23 @@ CLASS YCL_AAI_FC_STRUCTURE_TOOLS IMPLEMENTATION.
     DATA(l_structure_name) = i_structure_name.
 
     l_structure_name = condense( to_upper( l_structure_name ) ).
+
+    IF l_structure_name IS INITIAL.
+      r_response = |The structure name is mandatory.|.
+      RETURN.
+    ENDIF.
+
+    SELECT SINGLE @abap_true
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_structure_name
+      INTO @DATA(l_exists).
+
+    IF sy-subrc = 0.
+      r_response = |The structure { l_structure_name } already exists.|.
+      RETURN.
+    ENDIF.
 
     DATA(l_transport_request) = i_transport_request.
 
@@ -637,7 +654,7 @@ CLASS YCL_AAI_FC_STRUCTURE_TOOLS IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir).
+      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No structure found.|.

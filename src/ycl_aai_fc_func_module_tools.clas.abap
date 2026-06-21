@@ -170,7 +170,7 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir).
+      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No function module found in package { l_package }.|.
@@ -185,7 +185,7 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
       FROM tfdir
       FOR ALL ENTRIES IN @lt_tadir
       WHERE pname = @lt_tadir-obj_name
-      INTO TABLE @DATA(lt_tfdir).
+      INTO TABLE @DATA(lt_tfdir). "#EC CI_GENBUFF
 
     SORT lt_tfdir BY pname.
 
@@ -242,7 +242,7 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
             FROM tftit
             WHERE funcname = @<ls_tfdir>-funcname
             INTO @DATA(ls_tftit)
-            UP TO 1 ROWS.
+            UP TO 1 ROWS. "#EC CI_GENBUFF
           ENDSELECT.
 
           r_response = |{ r_response }Description: { ls_tftit-stext }{ cl_abap_char_utilities=>newline }|.

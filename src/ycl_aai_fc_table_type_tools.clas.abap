@@ -90,6 +90,23 @@ CLASS ycl_aai_fc_table_type_tools IMPLEMENTATION.
 
     l_table_type_name = condense( to_upper( l_table_type_name ) ).
 
+    IF l_table_type_name IS INITIAL.
+      r_response = |The table type name is mandatory.|.
+      RETURN.
+    ENDIF.
+
+    SELECT SINGLE @abap_true
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_table_type_name
+      INTO @DATA(l_exists).
+
+    IF sy-subrc = 0.
+      r_response = |The table type { l_table_type_name } already exists.|.
+      RETURN.
+    ENDIF.
+
     DATA(l_rowtype) = i_rowtype.
 
     l_rowtype = condense( to_upper( l_rowtype ) ).
@@ -587,7 +604,7 @@ CLASS ycl_aai_fc_table_type_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir).
+      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No table type found.|.

@@ -122,6 +122,23 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     l_data_element = condense( to_upper( l_data_element ) ).
 
+    IF l_data_element IS INITIAL.
+      r_response = |The data element name is mandatory.|.
+      RETURN.
+    ENDIF.
+
+    SELECT SINGLE @abap_true
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_data_element
+      INTO @DATA(l_exists).
+
+    IF sy-subrc = 0.
+      r_response = |The Data Element { l_data_element } already exists.|.
+      RETURN.
+    ENDIF.
+
     DATA(l_transport_request) = i_transport_request.
 
     l_transport_request = condense( to_upper( l_transport_request ) ).
@@ -194,7 +211,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-      r_response = |An error occurred while creating the Data Element { l_data_element }.|.
+      r_response = |An error occurred while creating the data element { l_data_element }.|.
       RETURN.
     ENDIF.
 
@@ -250,7 +267,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-      r_response = |An error occurred while activating the Data Element { l_data_element }.'|.
+      r_response = |An error occurred while activating the data element { l_data_element }.'|.
       DATA(l_inactive) = abap_true.
     ENDIF.
 
@@ -325,7 +342,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS        = 2.
 
     IF sy-subrc <> 0.
-      r_response = |Error while reading Data Element { l_data_element }.|.
+      r_response = |Error while reading data element { l_data_element }.|.
       RETURN.
     ENDIF.
 
@@ -373,7 +390,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir).
+      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No data element found.|.
@@ -508,7 +525,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS        = 2.
 
     IF sy-subrc <> 0.
-      r_response = |Error while reading Data Element { l_data_element }.|.
+      r_response = |Error while reading data element { l_data_element }.|.
       RETURN.
     ENDIF.
 
@@ -557,7 +574,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS            = 6.
 
     IF sy-subrc <> 0.
-      r_response = |An error occurred while creating the Data Element { l_data_element }.|.
+      r_response = |An error occurred while creating the data element { l_data_element }.|.
       RETURN.
     ENDIF.
 
@@ -572,7 +589,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-      r_response = |An error occurred while activating the Data Element { l_data_element }.{ cl_abap_char_utilities=>newline }|.
+      r_response = |An error occurred while activating the data element { l_data_element }.{ cl_abap_char_utilities=>newline }|.
       DATA(l_inactive) = abap_true.
     ENDIF.
 
@@ -666,7 +683,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       LOOP AT lt_objects_with_references ASSIGNING FIELD-SYMBOL(<ls_objects_with_references>).
 
         IF sy-tabix = 1.
-          r_response = |{ r_response }{ cl_abap_char_utilities=>newline }The Data Element { l_data_element } is still being referenced by the following object(s):|.
+          r_response = |{ r_response }{ cl_abap_char_utilities=>newline }The data element { l_data_element } is still being referenced by the following object(s):|.
         ENDIF.
 
         r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - Object Name: { <ls_objects_with_references>-name } Type: { <ls_objects_with_references>-type } |.
@@ -758,7 +775,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     ELSE.
 
-      r_response = |No translation to language `{ l_language }` found for Data Element { l_data_element }.|.
+      r_response = |No translation to language `{ l_language }` found for data element { l_data_element }.|.
 
     ENDIF.
 
@@ -900,7 +917,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
         OTHERS      = 3.
 
     IF sy-subrc <> 0 OR l_rc > 4.
-      r_response = |An error occurred while activating the Data Element { l_data_element }.'|.
+      r_response = |An error occurred while activating the data element { l_data_element }.'|.
       RETURN.
     ENDIF.
 

@@ -99,6 +99,23 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
 
     l_table_name = condense( to_upper( l_table_name ) ).
 
+    IF l_table_name IS INITIAL.
+      r_response = |The table name is mandatory.|.
+      RETURN.
+    ENDIF.
+
+    SELECT SINGLE @abap_true
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_table_name
+      INTO @DATA(l_exists).
+
+    IF sy-subrc = 0.
+      r_response = |The table { l_table_name } already exists.|.
+      RETURN.
+    ENDIF.
+
     DATA(l_transport_request) = i_transport_request.
 
     l_transport_request = condense( to_upper( l_transport_request ) ).
@@ -457,7 +474,7 @@ CLASS ycl_aai_fc_table_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir).
+      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No table found.|.

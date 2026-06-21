@@ -54,6 +54,11 @@ CLASS ycl_aai_fc_oo_class_tools DEFINITION
                 i_class_name      TYPE yde_aai_fc_oo_class_name
       RETURNING VALUE(r_response) TYPE string.
 
+    METHODS get_current_transport_request
+      IMPORTING
+                i_class_name      TYPE yde_aai_fc_oo_class_name
+      RETURNING VALUE(r_response) TYPE string.
+
   PROTECTED SECTION.
 
   PRIVATE SECTION.
@@ -176,6 +181,24 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
   METHOD read.
 
+    CLEAR r_response.
+
+    DATA(l_class_name) = i_class_name.
+
+    l_class_name =  to_upper( condense( l_class_name ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_class_name
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Class { l_class_name } not found.|.
+      RETURN.
+    ENDIF.
+
     r_response = me->_get_source_code( i_class_name ).
 
 *    DATA: lo_result_obj_intf     TYPE REF TO if_oo_clif_source,
@@ -234,7 +257,7 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir).
+      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No class found in package { l_package }.|.
@@ -308,7 +331,9 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
     CLEAR r_response.
 
-    DATA(l_class_name) =  to_upper( condense( i_class_name ) ).
+    DATA(l_class_name) = i_class_name.
+
+    l_class_name =  to_upper( condense( l_class_name ) ).
 
     SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
       FROM tadir
@@ -351,6 +376,12 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
       r_response = |{ r_response }Activation status: Active|.
     ENDIF.
 
+    DATA(l_current_transport_request) = me->get_current_transport_request( l_class_name ).
+
+    IF l_current_transport_request IS NOT INITIAL.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Transport Request: { l_current_transport_request }|.
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD update.
@@ -363,7 +394,21 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
     DATA(l_transport_request) = to_upper( condense( i_transport_request ) ).
 
-    DATA(l_class_name) = to_lower( condense( i_class_name ) ).
+    DATA(l_class_name) = i_class_name.
+
+    l_class_name =  to_upper( condense( l_class_name ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_class_name
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Class { l_class_name } not found.|.
+      RETURN.
+    ENDIF.
 
     me->_lock( i_class_name ).
 
@@ -508,6 +553,25 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD get_current_transport_request.
+
+    DATA(l_class_name) = i_class_name.
+
+    l_class_name = to_lower( condense( l_class_name ) ).
+
+    NEW ycl_aai_fc_cts_api( )->get_current_transport_request(
+      EXPORTING
+        i_object_name       = l_class_name
+        i_pgmid             = mc_pgmid
+        i_object            = mc_object
+      IMPORTING
+        e_transport_request = DATA(l_transport_request)
+    ).
+
+    r_response = l_transport_request.
+
+  ENDMETHOD.
+
   METHOD _deserialize_check_run_reports.
 
     TRY.
@@ -532,6 +596,18 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
     DATA(l_class_name) = i_class_name.
 
     l_class_name = to_upper( condense( l_class_name ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_class_name
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Class { l_class_name } not found.|.
+      RETURN.
+    ENDIF.
 
     DATA(l_has_errors) = abap_false.
 
@@ -747,10 +823,10 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
           l_source   TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_false.
+    DATA(l_read) = abap_true.
     DATA(l_update) = abap_false.
     DATA(l_search) = abap_false.
-    DATA(l_get_properties) = abap_true.
+    DATA(l_get_properties) = abap_false.
     DATA(l_activate) = abap_false.
     DATA(l_lock) = abap_false.
     DATA(l_unlock) = abap_false.
