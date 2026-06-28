@@ -8,7 +8,8 @@ CLASS ycl_aai_fc_func_module_tools DEFINITION
     INTERFACES if_oo_adt_classrun.
 
     CONSTANTS: mc_pgmid  TYPE e071-pgmid  VALUE 'R3TR',
-               mc_object TYPE e071-object VALUE 'FUGR'.
+               mc_object TYPE e071-object VALUE 'FUGR',
+               mc_uri    TYPE string      VALUE '/sap/bc/adt/functions/groups/&1/fmodules'.
 
     TYPES ty_string_t TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
 
@@ -32,6 +33,16 @@ CLASS ycl_aai_fc_func_module_tools DEFINITION
       IMPORTING
                 i_function_module   TYPE rs38l_fnam
       RETURNING VALUE(r_authorized) TYPE abap_bool.
+
+    METHODS _get_source_code
+      IMPORTING
+                i_function_module TYPE rs38l_fnam
+      RETURNING VALUE(r_source)   TYPE string.
+
+    METHODS _get_function_group
+      IMPORTING
+                i_function_module       TYPE rs38l_fnam
+      RETURNING VALUE(r_function_group) TYPE rs38l_area.
 
 ENDCLASS.
 
@@ -170,7 +181,7 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
+      INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No function module found in package { l_package }.|.
@@ -185,7 +196,7 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
       FROM tfdir
       FOR ALL ENTRIES IN @lt_tadir
       WHERE pname = @lt_tadir-obj_name
-      INTO TABLE @DATA(lt_tfdir). "#EC CI_GENBUFF
+      INTO TABLE @DATA(lt_tfdir).                       "#EC CI_GENBUFF
 
     SORT lt_tfdir BY pname.
 
@@ -242,7 +253,7 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
             FROM tftit
             WHERE funcname = @<ls_tfdir>-funcname
             INTO @DATA(ls_tftit)
-            UP TO 1 ROWS. "#EC CI_GENBUFF
+            UP TO 1 ROWS.                               "#EC CI_GENBUFF
           ENDSELECT.
 
           r_response = |{ r_response }Description: { ls_tftit-stext }{ cl_abap_char_utilities=>newline }|.
@@ -261,12 +272,74 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD _get_source_code.
+
+    DATA: ls_request  TYPE sadt_rest_request,
+          ls_response TYPE sadt_rest_response.
+
+    DATA l_function_group_name TYPE string.
+
+    DATA(l_function_module) = to_lower( condense( i_function_module ) ).
+
+    DATA(l_function_group) = me->_get_function_group( i_function_module ).
+
+    l_function_group_name = to_lower( condense( l_function_group ) ).
+
+    ls_request-request_line-method = 'GET'.
+    ls_request-request_line-uri = |{ me->mc_uri }/{ l_function_module }/source/main|.
+    ls_request-request_line-version = 'HTTP/1.1'.
+
+    REPLACE '&1' IN ls_request-request_line-uri WITH l_function_group_name.
+
+    ls_request-header_fields = VALUE #( ( name = 'Accept'
+                                          value = 'text/plain' ) ).
+
+    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
+      EXPORTING
+        request  = ls_request
+      IMPORTING
+        response = ls_response.
+
+    r_source = cl_abap_codepage=>convert_from( source = ls_response-message_body ).
+
+  ENDMETHOD.
+
+  METHOD _get_function_group.
+
+    CLEAR r_function_group.
+
+    DATA(l_function_module) = to_upper( condense( i_function_module ) ).
+
+    SELECT SINGLE funcname, pname, include
+      FROM tfdir
+      WHERE funcname = @l_function_module
+      INTO @DATA(ls_tfdir).
+
+    IF sy-subrc <> 0.
+      RETURN.
+    ENDIF.
+
+    CALL FUNCTION 'FUNCTION_INCLUDE_CONCATENATE'
+      CHANGING
+        program                  = ls_tfdir-pname
+        complete_area            = r_function_group
+      EXCEPTIONS
+        not_enough_input         = 0
+        no_function_pool         = 0
+        delimiter_wrong_position = 0
+        OTHERS                   = 0.
+
+  ENDMETHOD.
+
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
 
     DATA(l_read) = abap_false.
-    DATA(l_search) = abap_true.
+    DATA(l_search) = abap_false.
+    DATA(l_get_function_group) = abap_false.
+    DATA(l_get_source_code) = abap_true.
+
 
     CASE abap_true.
 
@@ -284,6 +357,17 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
 *                       i_function_module   =
 *                       i_short_description =
                      ).
+
+      WHEN l_get_function_group.
+
+        DATA(l_fg) = me->_get_function_group( i_function_module = 'Z_F_YAAI_FC_TST1_1' ).
+
+        l_response = l_fg.
+
+
+      WHEN l_get_source_code.
+
+        l_response = me->_get_source_code( 'Z_F_YAAI_FC_TST1_1' ).
 
     ENDCASE.
 

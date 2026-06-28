@@ -87,6 +87,22 @@ CLASS ycl_aai_fc_oo_class_tools DEFINITION
         e_line   TYPE i
         e_column TYPE i.
 
+    METHODS _get_properties
+      IMPORTING
+        i_class_name    TYPE yde_aai_fc_oo_class_name
+      EXPORTING
+        e_error_message TYPE string
+        e_s_abap_class  TYPE if_adt_oo_types=>ty_abap_class.
+
+    METHODS _set_properties
+      IMPORTING
+        i_class_name        TYPE yde_aai_fc_oo_class_name
+        i_s_abap_class      TYPE if_adt_oo_types=>ty_abap_class
+        i_transport_request TYPE yde_aai_fc_transport_request
+      EXPORTING
+        e_success           TYPE abap_bool
+        e_error_description TYPE string.
+
     METHODS _deserialize_check_run_reports
       IMPORTING
         i_xml                TYPE xstring
@@ -257,7 +273,7 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
-      INTO TABLE @DATA(lt_tadir). "#EC CI_GENBUFF
+      INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
       r_response = |No class found in package { l_package }.|.
@@ -427,8 +443,6 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
       IMPORTING
         response = ls_response.
 
-    me->_unlock( i_class_name ).
-
     IF ls_response-message_body IS NOT INITIAL.
 
       TRY.
@@ -447,19 +461,52 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
     IF ls_exc_data-message IS NOT INITIAL.
 
-      r_response = ls_exc_data-message.
-
-      RETURN.
-
-    ENDIF.
-
-    IF ls_exc_data-message IS NOT INITIAL.
+      me->_unlock( i_class_name ).
 
       r_response = ls_exc_data-message.
 
       RETURN.
 
     ENDIF.
+
+    IF i_short_description IS NOT INITIAL.
+
+      me->_get_properties(
+        EXPORTING
+          i_class_name = i_class_name
+        IMPORTING
+          e_s_abap_class  = DATA(ls_abap_class)
+      ).
+
+      ls_abap_class-description = i_short_description.
+
+      me->_set_properties(
+        EXPORTING
+          i_class_name = i_class_name
+          i_transport_request = i_transport_request
+          i_s_abap_class       = ls_abap_class
+        IMPORTING
+          e_error_description = DATA(l_error_description)
+          e_success           = DATA(l_properties_updated)
+      ).
+
+      IF l_properties_updated = abap_false.
+
+        r_response = |Class { i_class_name } source code updated but the description was not.|.
+
+        IF l_error_description IS NOT INITIAL.
+          r_response = |{ r_response }Error: { l_error_description }|.
+        ENDIF.
+
+        me->_unlock( i_class_name ).
+
+        RETURN.
+
+      ENDIF.
+
+    ENDIF.
+
+    me->_unlock( i_class_name ).
 
     r_response = |Class { i_class_name } updated successfully!|.
 
@@ -793,6 +840,135 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD _get_properties.
+
+    DATA: ls_request  TYPE sadt_rest_request,
+          ls_response TYPE sadt_rest_response,
+          ls_exc_data TYPE sadt_exception.
+
+    DATA l_langu TYPE t002-laiso.
+
+    CLEAR: e_s_abap_class, e_error_message.
+
+    DATA(l_class_name) = to_lower( condense( i_class_name ) ).
+
+    ls_request-request_line-method = 'GET'.
+    ls_request-request_line-uri = |{ me->mc_uri }/{ l_class_name }|.
+    ls_request-request_line-version = 'HTTP/1.1'.
+
+    ls_request-header_fields = VALUE #( ( name = 'Accept'
+                                          value = 'application/vnd.sap.adt.oo.classes.v4+xml, application/vnd.sap.adt.oo.classes.v3+xml, application/vnd.sap.adt.oo.classes.v2+xml, application/vnd.sap.adt.oo.classes+xml' ) ).
+
+    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
+      EXPORTING
+        request  = ls_request
+      IMPORTING
+        response = ls_response.
+
+    IF ls_response-message_body IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    TRY.
+
+        CALL TRANSFORMATION class_transformation
+          SOURCE XML ls_response-message_body
+          RESULT abap_class = e_s_abap_class.
+
+        RETURN.
+
+      CATCH cx_transformation_error ##NO_HANDLER.
+    ENDTRY.
+
+    IF ls_response-message_body IS NOT INITIAL.
+
+      TRY.
+
+          SELECT SINGLE laiso FROM t002 INTO @l_langu WHERE spras = @sy-langu.
+
+          CALL TRANSFORMATION sadt_exception
+            SOURCE XML ls_response-message_body
+            RESULT exception_data = ls_exc_data
+                   langu          = l_langu.
+
+        CATCH cx_transformation_error ##NO_HANDLER.
+      ENDTRY.
+
+    ENDIF.
+
+    IF ls_exc_data-message IS NOT INITIAL.
+      e_error_message = ls_exc_data-message.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD _set_properties.
+
+    DATA: ls_request  TYPE sadt_rest_request,
+          ls_response TYPE sadt_rest_response,
+          ls_exc_data TYPE sadt_exception.
+
+    DATA l_langu TYPE t002-laiso.
+
+    CLEAR: e_error_description,
+           e_success.
+
+    DATA(l_class_name) = to_lower( condense( i_class_name ) ).
+    DATA(l_transport_request) = to_upper( condense( i_transport_request ) ).
+
+    ls_request-request_line-method = 'PUT'.
+    ls_request-request_line-uri = |{ me->mc_uri }/{ l_class_name }?lockHandle={ me->_lock_handle }&corrNr={ l_transport_request }|.
+    ls_request-request_line-version = 'HTTP/1.1'.
+
+    ls_request-header_fields = VALUE #( ( name = 'Accept'
+                                          value = 'application/vnd.sap.adt.checkmessages+xml' )
+
+                                        ( name = 'Content-Type'
+                                          value = 'application/vnd.sap.adt.oo.classes.v2+xml' ) ).
+
+    TRY.
+
+        CALL TRANSFORMATION class_transformation
+          SOURCE abap_class = i_s_abap_class
+          RESULT XML ls_request-message_body.
+
+      CATCH cx_transformation_error ##NO_HANDLER.
+    ENDTRY.
+
+    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
+      EXPORTING
+        request  = ls_request
+      IMPORTING
+        response = ls_response.
+
+    IF ls_response-message_body IS INITIAL.
+
+      e_success = abap_true.
+
+      RETURN.
+
+    ELSE.
+
+      e_success = abap_false.
+
+      TRY.
+
+          SELECT SINGLE laiso FROM t002 INTO @l_langu WHERE spras = @sy-langu.
+
+          CALL TRANSFORMATION sadt_exception
+            SOURCE XML ls_response-message_body
+            RESULT exception_data = ls_exc_data
+                   langu          = l_langu.
+
+          e_error_description = ls_exc_data-message.
+
+        CATCH cx_transformation_error ##NO_HANDLER.
+      ENDTRY.
+
+    ENDIF.
+
+  ENDMETHOD.
+
   METHOD _is_active.
 
     DATA: lt_messages TYPE STANDARD TABLE OF sprot_u WITH DEFAULT KEY,
@@ -823,8 +999,8 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
           l_source   TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_true.
-    DATA(l_update) = abap_false.
+    DATA(l_read) = abap_false.
+    DATA(l_update) = abap_true.
     DATA(l_search) = abap_false.
     DATA(l_get_properties) = abap_false.
     DATA(l_activate) = abap_false.
@@ -872,7 +1048,7 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
         l_response = me->update(
                        i_class_name        = 'ZCL_TEST_CREATE_FC_03'
-*                       i_short_description =
+                       i_short_description = 'Test update via ADT API'
                        i_transport_request = 'NPLK900142'
                        i_source            = l_source
                      ).
@@ -902,7 +1078,14 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
       WHEN l_get_properties.
 
-        l_response = me->get_properties( 'ZCL_TEST_CREATE_FC_03' ).
+        "l_response = me->get_properties( 'ZCL_TEST_CREATE_FC_03' ).
+
+        me->_get_properties(
+          EXPORTING
+            i_class_name   = 'ZCL_TEST_CREATE_FC_03'
+*          IMPORTING
+*            e_s_abap_class =
+        ).
 
     ENDCASE.
 
