@@ -5,6 +5,8 @@ CLASS ycl_aai_fc_sql_tools DEFINITION
 
   PUBLIC SECTION.
 
+    INTERFACES if_oo_adt_classrun.
+
     METHODS constructor.
 
     METHODS execute_sql_query
@@ -58,12 +60,12 @@ CLASS ycl_aai_fc_sql_tools IMPLEMENTATION.
 
     SELECT sign, opti AS option, low, high
       FROM tvarvc
-      WHERE name = 'YAAI_FC_SQL_READ_WHITELIST'
+      WHERE name = 'YAAI_FC_SQL_INSERT_WHITELIST'
       INTO CORRESPONDING FIELDS OF TABLE @me->_insert_whitelist.
 
     SELECT sign, opti AS option, low, high
       FROM tvarvc
-      WHERE name = 'YAAI_FC_SQL_INSERT_WHITELIST'
+      WHERE name = 'YAAI_FC_SQL_READ_WHITELIST'
       INTO CORRESPONDING FIELDS OF TABLE @me->_read_whitelist.
 
     SELECT sign, opti AS option, low, high
@@ -295,6 +297,35 @@ CLASS ycl_aai_fc_sql_tools IMPLEMENTATION.
         RETURN.
 
     ENDTRY.
+
+  ENDMETHOD.
+
+  METHOD if_oo_adt_classrun~main.
+
+    DATA l_response TYPE string.
+
+    DATA(l_query) = abap_true.
+
+    CASE abap_true.
+
+      WHEN l_query.
+
+        me->execute_sql_query(
+          EXPORTING
+            i_database_table = 'YAAI_API'
+            i_fieldlist      = 'ID, BASE_URL'
+            i_where_clause   = 'ID <> @space'
+          RECEIVING
+            r_response       = l_response
+        ).
+
+    ENDCASE.
+
+    IF l_response IS NOT INITIAL.
+
+      out->write( l_response ).
+
+    ENDIF.
 
   ENDMETHOD.
 
