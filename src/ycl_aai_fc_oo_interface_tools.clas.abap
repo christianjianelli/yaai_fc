@@ -965,7 +965,7 @@ CLASS ycl_aai_fc_oo_interface_tools IMPLEMENTATION.
     DATA ls_e071 TYPE e071.
 
     ls_e071-object   = 'INTF'.
-    ls_e071-obj_name = i_interface_name.
+    ls_e071-obj_name = to_upper( condense( i_interface_name ) ).
     INSERT ls_e071 INTO TABLE lt_e071.
 
     CALL FUNCTION 'RS_INACTIVE_OBJECTS_WARNING'

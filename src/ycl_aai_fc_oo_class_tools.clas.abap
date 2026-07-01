@@ -536,7 +536,7 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
     l_class_name = to_lower( condense( l_class_name ) ).
 
-    lt_checkrun_objects = VALUE #( ( object_reference-uri = |/sap/bc/adt/oo/classes/{ l_class_name }|
+    lt_checkrun_objects = VALUE #( ( object_reference-uri = |{ mc_uri }/{ l_class_name }|
                                      version = 'inactive' ) ).
 
     TRY.
@@ -976,8 +976,8 @@ CLASS ycl_aai_fc_oo_class_tools IMPLEMENTATION.
 
     DATA ls_e071 TYPE e071.
 
-    ls_e071-object   = 'CLAS'.
-    ls_e071-obj_name = i_class_name.
+    ls_e071-object   = mc_object.
+    ls_e071-obj_name = to_upper( condense( i_class_name ) ).
     INSERT ls_e071 INTO TABLE lt_e071.
 
     CALL FUNCTION 'RS_INACTIVE_OBJECTS_WARNING'

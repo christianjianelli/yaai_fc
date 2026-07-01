@@ -42,6 +42,7 @@ CLASS ycl_aai_fc_func_group_tools DEFINITION
     METHODS _is_authorized
       IMPORTING
                 i_function_group_name TYPE rs38l_area
+                i_mode                TYPE csequence DEFAULT 'SHOW'
       RETURNING VALUE(r_authorized)   TYPE abap_bool.
 
 ENDCLASS.
@@ -245,11 +246,13 @@ CLASS ycl_aai_fc_func_group_tools IMPLEMENTATION.
 
   METHOD _is_authorized.
 
+    "Mode ('INSERT','MODIFY','SHOW','FREE')
+
     r_authorized = abap_true.
 
     CALL FUNCTION 'RS_ACCESS_PERMISSION'
       EXPORTING
-        mode                     = 'SHOW'
+        mode                     = i_mode
         object                   = i_function_group_name
         object_class             = mc_object
         suppress_corr_check      = abap_true

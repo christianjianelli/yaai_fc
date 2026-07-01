@@ -41,19 +41,15 @@ CLASS ycl_aai_fc_program_tools DEFINITION
                 i_source            TYPE string
       RETURNING VALUE(r_response)   TYPE string.
 
-    METHODS syntax_check
+    METHODS check_syntax
       IMPORTING
                 i_program_name    TYPE programm
       RETURNING VALUE(r_response) TYPE string.
 
-    METHODS calculate_start_end
+    METHODS activate
       IMPORTING
-        i_cursor_line TYPE i
-        i_lines       TYPE i
-        i_max_lines   TYPE i DEFAULT 10
-      EXPORTING
-        e_start_line  TYPE i
-        e_end_line    TYPE i.
+                i_program_name    TYPE programm
+      RETURNING VALUE(r_response) TYPE string.
 
   PROTECTED SECTION.
 
@@ -66,6 +62,7 @@ CLASS ycl_aai_fc_program_tools DEFINITION
     METHODS _is_authorized
       IMPORTING
                 i_program_name      TYPE programm
+                i_mode              TYPE csequence DEFAULT 'SHOW'
       RETURNING VALUE(r_authorized) TYPE abap_bool.
 
     METHODS _get_properties
@@ -97,12 +94,37 @@ CLASS ycl_aai_fc_program_tools DEFINITION
       IMPORTING
         i_program_name TYPE programm.
 
+    METHODS _is_active
+      IMPORTING
+                i_program_name     TYPE programm
+      RETURNING VALUE(r_is_active) TYPE abap_bool.
+
+    METHODS _deserialize_check_run_reports
+      IMPORTING
+        i_xml                TYPE xstring
+      EXPORTING
+        et_check_run_reports TYPE if_adt_check_run_response=>gty_check_run_reports.
+
     METHODS _get_line_and_column_from_uri
       IMPORTING
         i_uri    TYPE csequence
       EXPORTING
         e_line   TYPE i
         e_column TYPE i.
+
+    METHODS _syntax_check_old
+      IMPORTING
+                i_program_name    TYPE programm
+      RETURNING VALUE(r_response) TYPE string.
+
+    METHODS _calculate_start_end
+      IMPORTING
+        i_cursor_line TYPE i
+        i_lines       TYPE i
+        i_max_lines   TYPE i DEFAULT 10
+      EXPORTING
+        e_start_line  TYPE i
+        e_end_line    TYPE i.
 
 ENDCLASS.
 
@@ -402,89 +424,187 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD syntax_check.
+  METHOD check_syntax.
 
-    DATA lt_source TYPE ty_string_t.
+    DATA lt_checkrun_objects TYPE seu_adt_check_run_objects.
 
-    DATA lt_errors TYPE STANDARD TABLE OF rslinlmsg.
+    DATA ls_request  TYPE sadt_rest_request.
+    DATA ls_response TYPE sadt_rest_response.
 
-    DATA: l_source        TYPE string,
-          l_error_message TYPE c LENGTH 200,
-          l_error_include TYPE sy-repid,
-          l_error_line    TYPE sy-subrc,
-          l_error_offset  TYPE sy-tabix,
-          l_error_subrc   TYPE sy-subrc.
+    FREE r_response.
+
+    FREE me->_t_check_run_reports.
+
+    ls_request-request_line-method = 'POST'.
+    ls_request-request_line-uri = '/sap/bc/adt/checkruns?reporters=abapCheckRun'.
+    ls_request-request_line-version = 'HTTP/1.1'.
+
+    ls_request-header_fields = VALUE #( ( name = 'Accept'
+                                          value = 'application/vnd.sap.adt.checkmessages+xml' )
+                                        ( name = 'Content-Type'
+                                          value = 'application/vnd.sap.adt.checkobjects+xml' )   ).
 
     DATA(l_program_name) = i_program_name.
 
-    l_program_name = to_upper( condense( l_program_name ) ).
+    l_program_name = to_lower( condense( l_program_name ) ).
 
-    IF me->_is_authorized( l_program_name ) = abap_false.
-      r_response = |No authorization to read the program { i_program_name } source code.|.
-      RETURN.
-    ENDIF.
+    lt_checkrun_objects = VALUE #( ( object_reference-uri = |{ mc_uri }/{ l_program_name }|
+                                     version = 'inactive' ) ).
 
-    READ REPORT l_program_name INTO lt_source STATE 'I'. "Inactive version
+    TRY.
 
-    IF lt_source IS INITIAL.
-      READ REPORT l_program_name INTO lt_source. "Active version
-    ENDIF.
+        CALL TRANSFORMATION sadt_check_run_objects
+          SOURCE
+            checkrunobjects = lt_checkrun_objects
+          RESULT XML
+            ls_request-message_body.
 
-    CALL FUNCTION 'EDITOR_SYNTAX_CHECK'
+      CATCH cx_transformation_error.
+        RETURN.
+    ENDTRY.
+
+    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
       EXPORTING
-        i_program       = l_program_name
+        request  = ls_request
       IMPORTING
-        o_error_include = l_error_include
-        o_error_line    = l_error_line
-        o_error_message = l_error_message
-        o_error_offset  = l_error_offset
-        o_error_subrc   = l_error_subrc
-      TABLES
-        i_source        = lt_source
-        o_error_tab     = lt_errors.
+        response = ls_response.
 
-    IF l_error_subrc <> 0.
+    DATA(l_message_body) = cl_abap_codepage=>convert_from( source = ls_response-message_body ).
 
-      l_error_line = l_error_line - 2.
+    me->_deserialize_check_run_reports(
+      EXPORTING
+        i_xml                = ls_response-message_body
+      IMPORTING
+        et_check_run_reports = me->_t_check_run_reports
+    ).
 
-      r_response = |Syntax error found{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }|.
-      r_response = |{ r_response }Program: { i_program_name }{ cl_abap_char_utilities=>newline }|.
-      r_response = |{ r_response }Reported line: { l_error_line }{ cl_abap_char_utilities=>newline }|.
-      r_response = |{ r_response }Error message: { cl_abap_char_utilities=>newline }{ l_error_message }{ cl_abap_char_utilities=>newline }|.
+    LOOP AT me->_t_check_run_reports ASSIGNING FIELD-SYMBOL(<ls_check_run_report>).
 
-      me->calculate_start_end(
-        EXPORTING
-          i_cursor_line = l_error_line
-          i_lines       = lines( lt_source )
-        IMPORTING
-          e_start_line  = DATA(l_start_line)
-          e_end_line    = DATA(l_end_line)
-      ).
+      LOOP AT <ls_check_run_report>-results ASSIGNING FIELD-SYMBOL(<ls_result>).
 
-      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Code context:{ cl_abap_char_utilities=>newline }|.
+        SPLIT <ls_result>-uri AT '#start=' INTO TABLE DATA(lt_parts).
 
-      LOOP AT lt_source FROM l_start_line TO l_end_line
-        ASSIGNING FIELD-SYMBOL(<l_line>).
+        IF lines( lt_parts ) = 2.
 
-        r_response = |{ r_response }{ sy-tabix }:{ <l_line> }{ cl_abap_char_utilities=>newline }|.
+          SPLIT lt_parts[ 2 ] AT ',' INTO DATA(l_line) DATA(l_column).
+
+        ENDIF.
+
+        r_response = |{ r_response }{ <ls_result>-shorttext }{ cl_abap_char_utilities=>newline }|.
+
+        IF l_line IS NOT INITIAL.
+
+          r_response = |{ r_response }Line: { l_line }{ cl_abap_char_utilities=>newline }|.
+
+          IF l_column IS NOT INITIAL.
+            r_response = |{ r_response }Column: { l_column }{ cl_abap_char_utilities=>newline }|.
+          ENDIF.
+
+        ENDIF.
 
       ENDLOOP.
 
-    ELSE.
+    ENDLOOP.
 
-      r_response = |No errors found in program { i_program_name }|.
-
+    IF r_response IS INITIAL.
+      r_response = |The program { i_program_name } has no syntax errors.|.
+      RETURN.
     ENDIF.
+
+    DATA(l_syntax_errors_found) = |The program { i_program_name } has syntax errors.|.
+
+    r_response = l_syntax_errors_found &&
+                 cl_abap_char_utilities=>newline &&
+                 cl_abap_char_utilities=>newline &&
+                 r_response.
+
+  ENDMETHOD.
+
+  METHOD _syntax_check_old.
+
+*    DATA lt_source TYPE ty_string_t.
+*
+*    DATA lt_errors TYPE STANDARD TABLE OF rslinlmsg.
+*
+*    DATA: l_source        TYPE string,
+*          l_error_message TYPE c LENGTH 200,
+*          l_error_include TYPE sy-repid,
+*          l_error_line    TYPE sy-subrc,
+*          l_error_offset  TYPE sy-tabix,
+*          l_error_subrc   TYPE sy-subrc.
+*
+*    DATA(l_program_name) = i_program_name.
+*
+*    l_program_name = to_upper( condense( l_program_name ) ).
+*
+*    IF me->_is_authorized( l_program_name ) = abap_false.
+*      r_response = |No authorization to read the program { i_program_name } source code.|.
+*      RETURN.
+*    ENDIF.
+*
+*    READ REPORT l_program_name INTO lt_source STATE 'I'. "Inactive version
+*
+*    IF lt_source IS INITIAL.
+*      READ REPORT l_program_name INTO lt_source. "Active version
+*    ENDIF.
+*
+*    CALL FUNCTION 'EDITOR_SYNTAX_CHECK'
+*      EXPORTING
+*        i_program       = l_program_name
+*      IMPORTING
+*        o_error_include = l_error_include
+*        o_error_line    = l_error_line
+*        o_error_message = l_error_message
+*        o_error_offset  = l_error_offset
+*        o_error_subrc   = l_error_subrc
+*      TABLES
+*        i_source        = lt_source
+*        o_error_tab     = lt_errors.
+*
+*    IF l_error_subrc <> 0.
+*
+*      l_error_line = l_error_line - 2.
+*
+*      r_response = |Syntax error found{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }|.
+*      r_response = |{ r_response }Program: { i_program_name }{ cl_abap_char_utilities=>newline }|.
+*      r_response = |{ r_response }Reported line: { l_error_line }{ cl_abap_char_utilities=>newline }|.
+*      r_response = |{ r_response }Error message: { cl_abap_char_utilities=>newline }{ l_error_message }{ cl_abap_char_utilities=>newline }|.
+*
+*      me->_calculate_start_end(
+*        EXPORTING
+*          i_cursor_line = l_error_line
+*          i_lines       = lines( lt_source )
+*        IMPORTING
+*          e_start_line  = DATA(l_start_line)
+*          e_end_line    = DATA(l_end_line)
+*      ).
+*
+*      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Code context:{ cl_abap_char_utilities=>newline }|.
+*
+*      LOOP AT lt_source FROM l_start_line TO l_end_line
+*        ASSIGNING FIELD-SYMBOL(<l_line>).
+*
+*        r_response = |{ r_response }{ sy-tabix }:{ <l_line> }{ cl_abap_char_utilities=>newline }|.
+*
+*      ENDLOOP.
+*
+*    ELSE.
+*
+*      r_response = |No errors found in program { i_program_name }|.
+*
+*    ENDIF.
 
   ENDMETHOD.
 
   METHOD _is_authorized.
 
+    "Mode ('INSERT','MODIFY','SHOW','FREE')
+
     r_authorized = abap_true.
 
     CALL FUNCTION 'RS_ACCESS_PERMISSION'
       EXPORTING
-        mode                     = 'SHOW'
+        mode                     = i_mode
         object                   = i_program_name
         object_class             = mc_object
         suppress_corr_check      = abap_true
@@ -590,7 +710,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
                                           value = 'application/vnd.sap.adt.checkmessages+xml' )
 
                                         ( name = 'Content-Type'
-                                          value = 'application/vnd.sap.adt.oo.classes.v2+xml' ) ).
+                                          value = 'application/vnd.sap.adt.programs.programs.v2+xml' ) ).
 
     TRY.
 
@@ -659,39 +779,101 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD calculate_start_end.
+  METHOD activate.
 
-    " If the total number of lines is less than or equal to the max lines,
-    " the range is simply the entire file.
-    IF i_lines <= i_max_lines.
-      e_start_line = 1.
-      e_end_line = i_lines.
+    DATA: lt_objects   TYPE STANDARD TABLE OF dwinactiv,
+          ls_object    TYPE dwinactiv,
+          lv_no_force  TYPE boole_d,
+          lo_checklist TYPE REF TO cl_wb_checklist.
+
+    DATA(l_program_name) = i_program_name.
+
+    l_program_name = to_upper( condense( l_program_name ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_program_name
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Program { l_program_name } not found.|.
       RETURN.
     ENDIF.
 
-    " Calculate how many lines to take before and after the cursor.
-    " DIV performs integer division (it discards the remainder), which is
-    " equivalent to floor().
-    DATA(l_lines_before) = ( i_max_lines - 1 ) DIV 2.
-    DATA(l_lines_after)  = i_max_lines - 1 - l_lines_before.
+    DATA(l_has_errors) = abap_false.
 
-    " Calculate the initial ideal start and end lines.
-    DATA(l_start_line) = i_cursor_line - l_lines_before.
-    DATA(l_end_line)   = i_cursor_line + l_lines_after.
+    r_response = me->check_syntax( l_program_name ).
 
-    " Adjust the range if it goes out of the file's boundaries.
-    IF l_start_line < 1.
-      " CASE 1: Cursor is near the beginning of the file.
-      e_start_line = 1.
-      e_end_line = i_max_lines.
-    ELSEIF l_end_line > i_lines.
-      " CASE 2: Cursor is near the end of the file.
-      e_end_line = i_lines.
-      e_start_line = i_lines - i_max_lines + 1.
-    ELSE.
-      " CASE 3: The ideal range is valid and within boundaries.
-      e_start_line = l_start_line.
-      e_end_line = l_end_line.
+    LOOP AT me->_t_check_run_reports ASSIGNING FIELD-SYMBOL(<ls_check_run_report>).
+      IF <ls_check_run_report>-results IS NOT INITIAL.
+        l_has_errors = abap_true.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
+
+    IF l_has_errors = abap_true.
+      DATA(l_response) = |Error(s) found while activating the program { l_program_name }.{ cl_abap_char_utilities=>newline }|.
+      r_response = l_response && r_response.
+      RETURN.
+    ENDIF.
+
+    ls_object-object   = me->mc_object.
+    ls_object-obj_name = l_program_name.
+
+    APPEND ls_object TO lt_objects.
+
+    CALL FUNCTION 'RS_WORKING_OBJECTS_ACTIVATE'
+      EXPORTING
+        suppress_enqueue       = abap_true
+        suppress_corr_insert   = abap_true
+        ui_decoupled           = abap_true
+      IMPORTING
+        p_no_force_activation  = lv_no_force
+        p_checklist            = lo_checklist
+      TABLES
+        objects                = lt_objects
+      EXCEPTIONS
+        excecution_error       = 1
+        cancelled              = 2
+        insert_into_corr_error = 3
+        OTHERS                 = 4.
+
+    IF sy-subrc <> 0.
+      " Handle activation error
+      r_response = |Error while activating the program { l_program_name }.|.
+      RETURN.
+    ENDIF.
+
+    lo_checklist->get_error_messages(
+      IMPORTING
+        p_error_tab = DATA(lt_errors)                 " Error Message Table
+    ).
+
+    LOOP AT lt_errors ASSIGNING FIELD-SYMBOL(<ls_error>).
+
+      IF sy-tabix = 1.
+        r_response = |Error(s) while activating the program { l_program_name }.{ cl_abap_char_utilities=>newline }|.
+      ENDIF.
+
+      MESSAGE ID <ls_error>-message-msgid
+        TYPE <ls_error>-message-msgty
+        NUMBER <ls_error>-message-msgno
+        WITH <ls_error>-message-msgv1
+             <ls_error>-message-msgv2
+             <ls_error>-message-msgv3
+             <ls_error>-message-msgv4
+        INTO DATA(l_message).
+
+      r_response = |{ r_response }{ l_message }{ cl_abap_char_utilities=>newline }|.
+
+    ENDLOOP.
+
+    IF me->_is_active( l_program_name ) = abap_true.
+
+      r_response = |Program { l_program_name } activated.|.
+
     ENDIF.
 
   ENDMETHOD.
@@ -750,6 +932,20 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD _deserialize_check_run_reports.
+
+    TRY.
+
+        CALL TRANSFORMATION st_adt_check_run_reports
+          SOURCE XML i_xml
+          RESULT checkrunreports = et_check_run_reports.
+
+      CATCH cx_transformation_error.
+        RETURN.
+    ENDTRY.
+
+  ENDMETHOD.
+
   METHOD _get_line_and_column_from_uri.
 
     DATA: l_line   TYPE string,
@@ -780,6 +976,67 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD _is_active.
+
+    DATA: lt_messages TYPE STANDARD TABLE OF sprot_u WITH DEFAULT KEY,
+          lt_e071     TYPE STANDARD TABLE OF e071 WITH DEFAULT KEY.
+
+    DATA ls_e071 TYPE e071.
+
+    ls_e071-object   = mc_object.
+    ls_e071-obj_name = to_upper( condense( i_program_name ) ).
+    INSERT ls_e071 INTO TABLE lt_e071.
+
+    CALL FUNCTION 'RS_INACTIVE_OBJECTS_WARNING'
+      EXPORTING
+        suppress_protocol         = abap_false
+        with_program_includes     = abap_false
+        suppress_dictionary_check = abap_false
+      TABLES
+        p_e071                    = lt_e071
+        p_xmsg                    = lt_messages.
+
+    r_is_active = boolc( lt_messages IS INITIAL ).
+
+  ENDMETHOD.
+
+  METHOD _calculate_start_end.
+
+    " If the total number of lines is less than or equal to the max lines,
+    " the range is simply the entire file.
+    IF i_lines <= i_max_lines.
+      e_start_line = 1.
+      e_end_line = i_lines.
+      RETURN.
+    ENDIF.
+
+    " Calculate how many lines to take before and after the cursor.
+    " DIV performs integer division (it discards the remainder), which is
+    " equivalent to floor().
+    DATA(l_lines_before) = ( i_max_lines - 1 ) DIV 2.
+    DATA(l_lines_after)  = i_max_lines - 1 - l_lines_before.
+
+    " Calculate the initial ideal start and end lines.
+    DATA(l_start_line) = i_cursor_line - l_lines_before.
+    DATA(l_end_line)   = i_cursor_line + l_lines_after.
+
+    " Adjust the range if it goes out of the file's boundaries.
+    IF l_start_line < 1.
+      " CASE 1: Cursor is near the beginning of the file.
+      e_start_line = 1.
+      e_end_line = i_max_lines.
+    ELSEIF l_end_line > i_lines.
+      " CASE 2: Cursor is near the end of the file.
+      e_end_line = i_lines.
+      e_start_line = i_lines - i_max_lines + 1.
+    ELSE.
+      " CASE 3: The ideal range is valid and within boundaries.
+      e_start_line = l_start_line.
+      e_end_line = l_end_line.
+    ENDIF.
+
+  ENDMETHOD.
+
   METHOD if_oo_adt_classrun~main.
 
     DATA l_response TYPE string.
@@ -789,7 +1046,8 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     DATA(l_search) = abap_false.
     DATA(l_check) = abap_false.
     DATA(l_create) = abap_false.
-    DATA(l_update) = abap_true.
+    DATA(l_update) = abap_false.
+    DATA(l_activate) = abap_true.
 
     CASE abap_true.
 
@@ -810,7 +1068,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
       WHEN l_check.
 
-        l_response = me->syntax_check(
+        l_response = me->check_syntax(
           EXPORTING
             i_program_name = 'ZCHRJS00'
         ).
@@ -839,6 +1097,10 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
                                  i_transport_request = 'NPLK900125'
                                  i_source            = l_source
                                ).
+
+      WHEN l_activate.
+
+        l_response = me->activate( 'ZTESTTOOL1' ).
 
     ENDCASE.
 
