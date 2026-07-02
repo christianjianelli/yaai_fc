@@ -1,4 +1,4 @@
-CLASS ycl_aai_fc_program_tools DEFINITION
+CLASS ycl_aai_fc_include_tools DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC .
@@ -9,25 +9,25 @@ CLASS ycl_aai_fc_program_tools DEFINITION
 
     CONSTANTS: mc_pgmid  TYPE e071-pgmid  VALUE 'R3TR',
                mc_object TYPE e071-object VALUE 'PROG',
-               mc_uri    TYPE string      VALUE '/sap/bc/adt/programs/programs'.
+               mc_uri    TYPE string      VALUE '/sap/bc/adt/programs/includes'.
 
     TYPES ty_string_t TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
 
     METHODS read
       IMPORTING
-                i_program_name    TYPE programm
+                i_include_name    TYPE yde_aai_fc_include_name
       RETURNING VALUE(r_response) TYPE string.
 
     METHODS search
       IMPORTING
                 i_package           TYPE packname
-                i_program_name      TYPE programm OPTIONAL
+                i_include_name      TYPE yde_aai_fc_include_name OPTIONAL
                 i_short_description TYPE as4text OPTIONAL
       RETURNING VALUE(r_response)   TYPE string.
 
     METHODS create
       IMPORTING
-                i_program_name      TYPE programm
+                i_include_name      TYPE yde_aai_fc_include_name
                 i_short_description TYPE as4text
                 i_transport_request TYPE yde_aai_fc_transport_request
                 i_package           TYPE packname
@@ -35,7 +35,7 @@ CLASS ycl_aai_fc_program_tools DEFINITION
 
     METHODS update
       IMPORTING
-                i_program_name      TYPE programm
+                i_include_name      TYPE yde_aai_fc_include_name
                 i_short_description TYPE as4text OPTIONAL
                 i_transport_request TYPE yde_aai_fc_transport_request
                 i_source            TYPE string
@@ -43,12 +43,12 @@ CLASS ycl_aai_fc_program_tools DEFINITION
 
     METHODS check_syntax
       IMPORTING
-                i_program_name    TYPE programm
+                i_include_name    TYPE yde_aai_fc_include_name
       RETURNING VALUE(r_response) TYPE string.
 
     METHODS activate
       IMPORTING
-                i_program_name    TYPE programm
+                i_include_name    TYPE yde_aai_fc_include_name
       RETURNING VALUE(r_response) TYPE string.
 
   PROTECTED SECTION.
@@ -61,21 +61,21 @@ CLASS ycl_aai_fc_program_tools DEFINITION
 
     METHODS _is_authorized
       IMPORTING
-                i_program_name      TYPE programm
+                i_include_name      TYPE yde_aai_fc_include_name
                 i_mode              TYPE csequence DEFAULT 'SHOW'
       RETURNING VALUE(r_authorized) TYPE abap_bool.
 
     METHODS _get_properties
       IMPORTING
-        i_program_name  TYPE programm
+        i_include_name  TYPE yde_aai_fc_include_name
       EXPORTING
         e_error_message TYPE string
-        e_s_prog_data   TYPE cl_sedi_adt_res_source=>ty_prog_data.
+        e_s_incl_data   TYPE cl_sedi_adt_res_source=>ty_prog_data.
 
     METHODS _set_properties
       IMPORTING
-        i_program_name      TYPE programm
-        i_s_prog_data       TYPE cl_sedi_adt_res_source=>ty_prog_data
+        i_include_name      TYPE yde_aai_fc_include_name
+        i_s_incl_data       TYPE cl_sedi_adt_res_source=>ty_prog_data
         i_transport_request TYPE yde_aai_fc_transport_request
       EXPORTING
         e_success           TYPE abap_bool
@@ -83,20 +83,20 @@ CLASS ycl_aai_fc_program_tools DEFINITION
 
     METHODS _get_source_code
       IMPORTING
-                i_program_name  TYPE programm
+                i_include_name  TYPE yde_aai_fc_include_name
       RETURNING VALUE(r_source) TYPE string.
 
     METHODS _lock
       IMPORTING
-        i_program_name TYPE programm.
+        i_include_name TYPE yde_aai_fc_include_name.
 
     METHODS _unlock
       IMPORTING
-        i_program_name TYPE programm.
+        i_include_name TYPE yde_aai_fc_include_name.
 
     METHODS _is_active
       IMPORTING
-                i_program_name     TYPE programm
+                i_include_name     TYPE yde_aai_fc_include_name
       RETURNING VALUE(r_is_active) TYPE abap_bool.
 
     METHODS _deserialize_check_run_reports
@@ -114,7 +114,7 @@ CLASS ycl_aai_fc_program_tools DEFINITION
 
     METHODS _syntax_check_old
       IMPORTING
-                i_program_name    TYPE programm
+                i_include_name    TYPE yde_aai_fc_include_name
       RETURNING VALUE(r_response) TYPE string.
 
     METHODS _calculate_start_end
@@ -130,7 +130,7 @@ ENDCLASS.
 
 
 
-CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
+CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
 
   METHOD read.
 
@@ -138,26 +138,26 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     DATA l_source TYPE string.
 
-    DATA(l_program_name) = i_program_name.
+    DATA(l_include_name) = i_include_name.
 
-    l_program_name = to_upper( condense( l_program_name ) ).
+    l_include_name = to_upper( condense( l_include_name ) ).
 
-    IF me->_is_authorized( l_program_name ) = abap_false.
-      r_response = |No authorization to read the program { i_program_name } source code.|.
+    IF me->_is_authorized( l_include_name ) = abap_false.
+      r_response = |No authorization to read the include { i_include_name } source code.|.
       RETURN.
     ENDIF.
 
     me->_get_properties(
       EXPORTING
-        i_program_name = l_program_name
+        i_include_name = l_include_name
       IMPORTING
-        e_s_prog_data  = DATA(ls_prog_data)
+        e_s_incl_data  = DATA(ls_incl_data)
     ).
 
-    l_source = me->_get_source_code( i_program_name = l_program_name ).
+    l_source = me->_get_source_code( i_include_name = l_include_name ).
 
-    r_response = |Program: { l_program_name }|.
-    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_prog_data-description }|.
+    r_response = |Include: { l_include_name }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_incl_data-description }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }```abap|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }{ l_source }|.
@@ -167,7 +167,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
   METHOD search.
 
-    DATA: l_program           TYPE string,
+    DATA: l_include           TYPE string,
           l_short_description TYPE string.
 
     CLEAR r_response.
@@ -176,27 +176,29 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     l_package = condense( to_upper( l_package ) ).
 
-    SELECT pgmid, object, obj_name, devclass, masterlang
-      FROM tadir
-      WHERE pgmid = @mc_pgmid
-        AND object = @mc_object
-        AND devclass = @l_package
+    SELECT a~pgmid, a~object, a~obj_name, a~devclass, a~masterlang
+      FROM tadir AS a INNER JOIN trdir AS b
+      ON a~obj_name = b~name
+      WHERE a~pgmid = @mc_pgmid
+        AND a~object = @mc_object
+        AND a~devclass = @l_package
+        AND b~subc = @cl_sedi_adt_res_source=>co_program_type_include
       INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
-      r_response = |No program found in package { l_package }.|.
+      r_response = |No include found in package { l_package }.|.
       RETURN.
     ENDIF.
 
-    l_program = |*{ i_program_name }*|.
+    l_include = |*{ i_include_name }*|.
 
     l_short_description = |*{ i_short_description }*|.
 
     LOOP AT lt_tadir ASSIGNING FIELD-SYMBOL(<ls_tadir>).
 
-      IF l_program IS NOT INITIAL.
+      IF l_include IS NOT INITIAL.
 
-        IF NOT <ls_tadir>-obj_name CP l_program.
+        IF NOT <ls_tadir>-obj_name CP l_include.
           CONTINUE.
         ENDIF.
 
@@ -220,13 +222,15 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
       ENDIF.
 
-      r_response = |{ r_response }Program: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Include: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
       r_response = |{ r_response }Description: { ls_trdirt-text }{ cl_abap_char_utilities=>newline }|.
+
+      CLEAR ls_trdirt.
 
     ENDLOOP.
 
     IF r_response IS INITIAL.
-      r_response = |No program found in package { l_package }.|.
+      r_response = |No include found in package { l_package }.|.
     ENDIF.
 
   ENDMETHOD.
@@ -235,7 +239,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     DATA: ls_request   TYPE sadt_rest_request,
           ls_response  TYPE sadt_rest_response,
-          ls_prog_data TYPE cl_sedi_adt_res_source=>ty_prog_data,
+          ls_incl_data TYPE cl_sedi_adt_res_source=>ty_prog_data,
           ls_exc_data  TYPE sadt_exception.
 
     DATA l_langu TYPE t002-laiso.
@@ -249,28 +253,28 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     ls_request-header_fields = VALUE #( ( name = 'Accept'
                                           value = 'application/vnd.sap.adt.checkmessages+xml' )
                                         ( name = 'Content-Type'
-                                          value = 'application/vnd.sap.adt.programs.programs.v2+xml' ) ).
+                                          value = 'application/vnd.sap.adt.programs.includes.v2+xml' ) ).
 
-    ls_prog_data-description = i_short_description.
-    ls_prog_data-language = sy-langu.
-    ls_prog_data-name = to_upper( condense( i_program_name ) ).
-    ls_prog_data-type = cl_sedi_adt_res_source=>co_wb_type_program.
-    ls_prog_data-responsible = sy-uname.
-    ls_prog_data-master_system = sy-sysid.
-    ls_prog_data-master_language = sy-langu.
-    ls_prog_data-package_ref-name = to_upper( condense( i_package ) ).
+    ls_incl_data-description = i_short_description.
+    ls_incl_data-language = sy-langu.
+    ls_incl_data-name = to_upper( condense( i_include_name ) ).
+    ls_incl_data-type = cl_sedi_adt_res_source=>co_wb_type_include.
+    ls_incl_data-responsible = sy-uname.
+    ls_incl_data-master_system = sy-sysid.
+    ls_incl_data-master_language = sy-langu.
+    ls_incl_data-package_ref-name = to_upper( condense( i_package ) ).
 
     TRY.
 
-        CALL TRANSFORMATION sedi_adt_program
+        CALL TRANSFORMATION sedi_adt_include
           SOURCE
-            prog_data = ls_prog_data
+            incl_data = ls_incl_data
           RESULT XML
             ls_request-message_body.
 
       CATCH cx_transformation_error.
 
-        r_response = |An error occured while creating the program { i_program_name }.|.
+        r_response = |An error occured while creating the include { i_include_name }.|.
 
         RETURN.
     ENDTRY.
@@ -305,7 +309,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     ENDIF.
 
-    r_response = |Program { i_program_name } created successfully!|.
+    r_response = |Include { i_include_name } created successfully!|.
 
   ENDMETHOD.
 
@@ -319,26 +323,26 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     DATA(l_transport_request) = to_upper( condense( i_transport_request ) ).
 
-    DATA(l_program_name) = i_program_name.
+    DATA(l_include_name) = i_include_name.
 
-    l_program_name =  to_upper( condense( l_program_name ) ).
+    l_include_name =  to_upper( condense( l_include_name ) ).
 
     SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
       FROM tadir
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
-        AND obj_name = @l_program_name
+        AND obj_name = @l_include_name
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.
-      r_response = |Program { l_program_name } not found.|.
+      r_response = |Include { l_include_name } not found.|.
       RETURN.
     ENDIF.
 
-    me->_lock( l_program_name ).
+    me->_lock( l_include_name ).
 
     ls_request-request_line-method = 'PUT'.
-    ls_request-request_line-uri = |{ mc_uri }/{ l_program_name }/source/main?lockHandle={ me->_lock_handle }&corrNr={ l_transport_request }|.
+    ls_request-request_line-uri = |{ mc_uri }/{ l_include_name }/source/main?lockHandle={ me->_lock_handle }&corrNr={ l_transport_request }|.
     ls_request-request_line-version = 'HTTP/1.1'.
 
     ls_request-header_fields = VALUE #( ( name = 'Accept'
@@ -373,7 +377,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     IF ls_exc_data-message IS NOT INITIAL.
 
-      me->_unlock( i_program_name ).
+      me->_unlock( i_include_name ).
 
       r_response = ls_exc_data-message.
 
@@ -385,18 +389,18 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
       me->_get_properties(
         EXPORTING
-          i_program_name = i_program_name
+          i_include_name = i_include_name
         IMPORTING
-          e_s_prog_data  = DATA(ls_prog_data)
+          e_s_incl_data  = DATA(ls_incl_data)
       ).
 
-      ls_prog_data-description = i_short_description.
+      ls_incl_data-description = i_short_description.
 
       me->_set_properties(
         EXPORTING
-          i_program_name      = i_program_name
+          i_include_name      = i_include_name
           i_transport_request = i_transport_request
-          i_s_prog_data       = ls_prog_data
+          i_s_incl_data       = ls_incl_data
         IMPORTING
           e_error_description = DATA(l_error_description)
           e_success           = DATA(l_properties_updated)
@@ -404,13 +408,13 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
       IF l_properties_updated = abap_false.
 
-        r_response = |Program { i_program_name } source code updated but the description was not.|.
+        r_response = |Include { i_include_name } source code updated but the description was not.|.
 
         IF l_error_description IS NOT INITIAL.
           r_response = |{ r_response }Error: { l_error_description }|.
         ENDIF.
 
-        me->_unlock( i_program_name ).
+        me->_unlock( i_include_name ).
 
         RETURN.
 
@@ -418,9 +422,9 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     ENDIF.
 
-    me->_unlock( i_program_name ).
+    me->_unlock( i_include_name ).
 
-    r_response = |Program { i_program_name } updated successfully!|.
+    r_response = |Include { i_include_name } updated successfully!|.
 
   ENDMETHOD.
 
@@ -444,11 +448,11 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
                                         ( name = 'Content-Type'
                                           value = 'application/vnd.sap.adt.checkobjects+xml' )   ).
 
-    DATA(l_program_name) = i_program_name.
+    DATA(l_include_name) = i_include_name.
 
-    l_program_name = to_lower( condense( l_program_name ) ).
+    l_include_name = to_lower( condense( l_include_name ) ).
 
-    lt_checkrun_objects = VALUE #( ( object_reference-uri = |{ mc_uri }/{ l_program_name }|
+    lt_checkrun_objects = VALUE #( ( object_reference-uri = |{ mc_uri }/{ l_include_name }|
                                      version = 'inactive' ) ).
 
     TRY.
@@ -507,11 +511,11 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     ENDLOOP.
 
     IF r_response IS INITIAL.
-      r_response = |The program { i_program_name } has no syntax errors.|.
+      r_response = |The program { i_include_name } has no syntax errors.|.
       RETURN.
     ENDIF.
 
-    DATA(l_syntax_errors_found) = |The program { i_program_name } has syntax errors.|.
+    DATA(l_syntax_errors_found) = |The program { i_include_name } has syntax errors.|.
 
     r_response = l_syntax_errors_found &&
                  cl_abap_char_utilities=>newline &&
@@ -533,24 +537,24 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 *          l_error_offset  TYPE sy-tabix,
 *          l_error_subrc   TYPE sy-subrc.
 *
-*    DATA(l_program_name) = i_program_name.
+*    DATA(l_include_name) = i_include_name.
 *
-*    l_program_name = to_upper( condense( l_program_name ) ).
+*    l_include_name = to_upper( condense( l_include_name ) ).
 *
-*    IF me->_is_authorized( l_program_name ) = abap_false.
-*      r_response = |No authorization to read the program { i_program_name } source code.|.
+*    IF me->_is_authorized( l_include_name ) = abap_false.
+*      r_response = |No authorization to read the program { i_include_name } source code.|.
 *      RETURN.
 *    ENDIF.
 *
-*    READ REPORT l_program_name INTO lt_source STATE 'I'. "Inactive version
+*    READ REPORT l_include_name INTO lt_source STATE 'I'. "Inactive version
 *
 *    IF lt_source IS INITIAL.
-*      READ REPORT l_program_name INTO lt_source. "Active version
+*      READ REPORT l_include_name INTO lt_source. "Active version
 *    ENDIF.
 *
 *    CALL FUNCTION 'EDITOR_SYNTAX_CHECK'
 *      EXPORTING
-*        i_program       = l_program_name
+*        i_program       = l_include_name
 *      IMPORTING
 *        o_error_include = l_error_include
 *        o_error_line    = l_error_line
@@ -566,7 +570,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 *      l_error_line = l_error_line - 2.
 *
 *      r_response = |Syntax error found{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }|.
-*      r_response = |{ r_response }Program: { i_program_name }{ cl_abap_char_utilities=>newline }|.
+*      r_response = |{ r_response }Program: { i_include_name }{ cl_abap_char_utilities=>newline }|.
 *      r_response = |{ r_response }Reported line: { l_error_line }{ cl_abap_char_utilities=>newline }|.
 *      r_response = |{ r_response }Error message: { cl_abap_char_utilities=>newline }{ l_error_message }{ cl_abap_char_utilities=>newline }|.
 *
@@ -590,7 +594,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 *
 *    ELSE.
 *
-*      r_response = |No errors found in program { i_program_name }|.
+*      r_response = |No errors found in program { i_include_name }|.
 *
 *    ENDIF.
 
@@ -605,7 +609,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     CALL FUNCTION 'RS_ACCESS_PERMISSION'
       EXPORTING
         mode                     = i_mode
-        object                   = i_program_name
+        object                   = i_include_name
         object_class             = mc_object
         suppress_corr_check      = abap_true
         suppress_language_check  = abap_true
@@ -636,16 +640,16 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     DATA l_langu TYPE t002-laiso.
 
-    CLEAR e_s_prog_data.
+    CLEAR e_s_incl_data.
 
-    DATA(l_program_name) = to_lower( condense( i_program_name ) ).
+    DATA(l_include_name) = to_lower( condense( i_include_name ) ).
 
     ls_request-request_line-method = 'GET'.
-    ls_request-request_line-uri = |{ me->mc_uri }/{ l_program_name }|.
+    ls_request-request_line-uri = |{ me->mc_uri }/{ l_include_name }|.
     ls_request-request_line-version = 'HTTP/1.1'.
 
     ls_request-header_fields = VALUE #( ( name = 'Accept'
-                                          value = 'application/vnd.sap.adt.programs.programs.v2+xml' ) ).
+                                          value = 'application/vnd.sap.adt.programs.includes.v2+xml' ) ).
 
     CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
       EXPORTING
@@ -659,9 +663,9 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     TRY.
 
-        CALL TRANSFORMATION sedi_adt_program
+        CALL TRANSFORMATION sedi_adt_include
           SOURCE XML ls_response-message_body
-          RESULT prog_data = e_s_prog_data.
+          RESULT incl_data = e_s_incl_data.
 
       CATCH cx_transformation_error ##NO_HANDLER.
     ENDTRY.
@@ -699,23 +703,23 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     CLEAR: e_error_description,
            e_success.
 
-    DATA(l_program_name) = to_lower( condense( i_program_name ) ).
+    DATA(l_include_name) = to_lower( condense( i_include_name ) ).
     DATA(l_transport_request) = to_upper( condense( i_transport_request ) ).
 
     ls_request-request_line-method = 'PUT'.
-    ls_request-request_line-uri = |{ me->mc_uri }/{ l_program_name }?lockHandle={ me->_lock_handle }&corrNr={ l_transport_request }|.
+    ls_request-request_line-uri = |{ me->mc_uri }/{ l_include_name }?lockHandle={ me->_lock_handle }&corrNr={ l_transport_request }|.
     ls_request-request_line-version = 'HTTP/1.1'.
 
     ls_request-header_fields = VALUE #( ( name = 'Accept'
                                           value = 'application/vnd.sap.adt.checkmessages+xml' )
 
                                         ( name = 'Content-Type'
-                                          value = 'application/vnd.sap.adt.programs.programs.v2+xml' ) ).
+                                          value = 'application/vnd.sap.adt.programs.includes.v2+xml' ) ).
 
     TRY.
 
-        CALL TRANSFORMATION sedi_adt_program
-          SOURCE prog_data = i_s_prog_data
+        CALL TRANSFORMATION sedi_adt_include
+          SOURCE incl_data = i_s_incl_data
           RESULT XML ls_request-message_body.
 
       CATCH cx_transformation_error ##NO_HANDLER.
@@ -760,10 +764,10 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     DATA: ls_request  TYPE sadt_rest_request,
           ls_response TYPE sadt_rest_response.
 
-    DATA(l_program_name) = to_lower( condense( i_program_name ) ).
+    DATA(l_include_name) = to_lower( condense( i_include_name ) ).
 
     ls_request-request_line-method = 'GET'.
-    ls_request-request_line-uri = |{ me->mc_uri }/{ l_program_name }/source/main|.
+    ls_request-request_line-uri = |{ me->mc_uri }/{ l_include_name }/source/main|.
     ls_request-request_line-version = 'HTTP/1.1'.
 
     ls_request-header_fields = VALUE #( ( name = 'Accept'
@@ -786,25 +790,25 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
           lv_no_force  TYPE boole_d,
           lo_checklist TYPE REF TO cl_wb_checklist.
 
-    DATA(l_program_name) = i_program_name.
+    DATA(l_include_name) = i_include_name.
 
-    l_program_name = to_upper( condense( l_program_name ) ).
+    l_include_name = to_upper( condense( l_include_name ) ).
 
     SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
       FROM tadir
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
-        AND obj_name = @l_program_name
+        AND obj_name = @l_include_name
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.
-      r_response = |Program { l_program_name } not found.|.
+      r_response = |Program { l_include_name } not found.|.
       RETURN.
     ENDIF.
 
     DATA(l_has_errors) = abap_false.
 
-    r_response = me->check_syntax( l_program_name ).
+    r_response = me->check_syntax( l_include_name ).
 
     LOOP AT me->_t_check_run_reports ASSIGNING FIELD-SYMBOL(<ls_check_run_report>).
       IF <ls_check_run_report>-results IS NOT INITIAL.
@@ -814,13 +818,13 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     ENDLOOP.
 
     IF l_has_errors = abap_true.
-      DATA(l_response) = |Error(s) found while activating the program { l_program_name }.{ cl_abap_char_utilities=>newline }|.
+      DATA(l_response) = |Error(s) found while activating the program { l_include_name }.{ cl_abap_char_utilities=>newline }|.
       r_response = l_response && r_response.
       RETURN.
     ENDIF.
 
     ls_object-object   = me->mc_object.
-    ls_object-obj_name = l_program_name.
+    ls_object-obj_name = l_include_name.
 
     APPEND ls_object TO lt_objects.
 
@@ -842,7 +846,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       " Handle activation error
-      r_response = |Error while activating the program { l_program_name }.|.
+      r_response = |Error while activating the program { l_include_name }.|.
       RETURN.
     ENDIF.
 
@@ -854,7 +858,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     LOOP AT lt_errors ASSIGNING FIELD-SYMBOL(<ls_error>).
 
       IF sy-tabix = 1.
-        r_response = |Error(s) while activating the program { l_program_name }.{ cl_abap_char_utilities=>newline }|.
+        r_response = |Error(s) while activating the program { l_include_name }.{ cl_abap_char_utilities=>newline }|.
       ENDIF.
 
       MESSAGE ID <ls_error>-message-msgid
@@ -870,9 +874,9 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     ENDLOOP.
 
-    IF me->_is_active( l_program_name ) = abap_true.
+    IF me->_is_active( l_include_name ) = abap_true.
 
-      r_response = |Program { l_program_name } activated.|.
+      r_response = |Program { l_include_name } activated.|.
 
     ENDIF.
 
@@ -884,10 +888,10 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
           ls_response    TYPE sadt_rest_response,
           ls_lock_result TYPE sadt_object_lock_result2.
 
-    DATA(l_program_name) = to_lower( condense( i_program_name ) ).
+    DATA(l_include_name) = to_lower( condense( i_include_name ) ).
 
     ls_request-request_line-method = 'POST' ##NO_TEXT.
-    ls_request-request_line-uri = |{ me->mc_uri }/{ l_program_name }?_action=LOCK&accessMode=MODIFY|.
+    ls_request-request_line-uri = |{ me->mc_uri }/{ l_include_name }?_action=LOCK&accessMode=MODIFY|.
     ls_request-request_line-version = 'HTTP/1.1' ##NO_TEXT.
 
     ls_request-header_fields = VALUE #( ( name = 'Accept'
@@ -918,10 +922,10 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     DATA: ls_request  TYPE sadt_rest_request,
           ls_response TYPE sadt_rest_response.
 
-    DATA(l_program_name) = to_lower( condense( i_program_name ) ).
+    DATA(l_include_name) = to_lower( condense( i_include_name ) ).
 
     ls_request-request_line-method = 'POST' ##NO_TEXT.
-    ls_request-request_line-uri = |{ me->mc_uri }/{ l_program_name }?_action=UNLOCK&lockHandle={ me->_lock_handle }| ##NO_TEXT.
+    ls_request-request_line-uri = |{ me->mc_uri }/{ l_include_name }?_action=UNLOCK&lockHandle={ me->_lock_handle }| ##NO_TEXT.
     ls_request-request_line-version = 'HTTP/1.1' ##NO_TEXT.
 
     CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
@@ -984,7 +988,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
     DATA ls_e071 TYPE e071.
 
     ls_e071-object   = mc_object.
-    ls_e071-obj_name = to_upper( condense( i_program_name ) ).
+    ls_e071-obj_name = to_upper( condense( i_include_name ) ).
     INSERT ls_e071 INTO TABLE lt_e071.
 
     CALL FUNCTION 'RS_INACTIVE_OBJECTS_WARNING'
@@ -1055,14 +1059,14 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
         l_response = me->read(
           EXPORTING
-            i_program_name = 'ZTESTTOOL1'
+            i_include_name = 'ZRXX_REPORT_TEMPLATE_C01'
         ).
 
       WHEN l_search.
 
         l_response = me->search(
-                       i_package           = 'Z001'
-*                       i_program_name      =
+                       i_package           = '$TMP'
+*                       i_include_name      =
 *                       i_short_description =
                      ).
 
@@ -1070,13 +1074,13 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
         l_response = me->check_syntax(
           EXPORTING
-            i_program_name = 'ZCHRJS00'
+            i_include_name = 'ZCHRJS00'
         ).
 
       WHEN l_create.
 
-        l_response = me->create( i_program_name      = 'ZTESTTOOL1'
-                                 i_short_description = 'Test create tool'
+        l_response = me->create( i_include_name      = 'ZTESTTOOL1_C01'
+                                 i_short_description = 'Test create include tool'
                                  i_transport_request = 'NPLK900125'
                                  i_package           = 'Z001'
                                ).
@@ -1084,23 +1088,21 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
       WHEN l_update.
 
         l_source = '*&---------------------------------------------------------------------*'.
-        l_source = |{ l_source }{ cl_abap_char_utilities=>newline }*& Report ZTESTTOOL1|.
+        l_source = |{ l_source }{ cl_abap_char_utilities=>newline }*& Include ztesttool1_c01|.
         l_source = |{ l_source }{ cl_abap_char_utilities=>newline }*&---------------------------------------------------------------------*|.
         l_source = |{ l_source }{ cl_abap_char_utilities=>newline }*&|.
         l_source = |{ l_source }{ cl_abap_char_utilities=>newline }*&---------------------------------------------------------------------*|.
-        l_source = |{ l_source }{ cl_abap_char_utilities=>newline }REPORT ztesttool1.|.
-        l_source = |{ l_source }{ cl_abap_char_utilities=>newline }START-OF-SELECTION.|.
         l_source = |{ l_source }{ cl_abap_char_utilities=>newline } IF 1 = 3.{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }  ENDIF.|.
 
-        l_response = me->update( i_program_name      = 'ZTESTTOOL1'
-                                 i_short_description = 'Test update tool 2'
+        l_response = me->update( i_include_name      = 'ZTESTTOOL1_C01'
+                                 i_short_description = 'Test update include tool'
                                  i_transport_request = 'NPLK900125'
                                  i_source            = l_source
                                ).
 
       WHEN l_activate.
 
-        l_response = me->activate( 'ZTESTTOOL1' ).
+        l_response = me->activate( 'ZTESTTOOL1_C01' ).
 
     ENDCASE.
 
