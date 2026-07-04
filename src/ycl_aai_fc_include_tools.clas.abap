@@ -134,13 +134,26 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
 
   METHOD read.
 
-    DATA lt_source TYPE ty_string_t.
+    DATA: lt_source        TYPE ty_string_t,
+          lt_main_programs TYPE STANDARD TABLE OF programm.
 
     DATA l_source TYPE string.
 
     DATA(l_include_name) = i_include_name.
 
     l_include_name = to_upper( condense( l_include_name ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_include_name
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Include { l_include_name } not found.|.
+      RETURN.
+    ENDIF.
 
     IF me->_is_authorized( l_include_name ) = abap_false.
       r_response = |No authorization to read the include { i_include_name } source code.|.
@@ -158,6 +171,11 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
 
     r_response = |Include: { l_include_name }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_incl_data-description }|.
+
+    IF ls_incl_data-main_program-name IS NOT INITIAL.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Main program: { ls_incl_data-main_program-name }|.
+    ENDIF.
+
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }```abap|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }{ l_source }|.
@@ -263,6 +281,18 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
     ls_incl_data-master_system = sy-sysid.
     ls_incl_data-master_language = sy-langu.
     ls_incl_data-package_ref-name = to_upper( condense( i_package ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @ls_incl_data-name
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc = 0.
+      r_response = |Include { i_include_name } already exists.|.
+      RETURN.
+    ENDIF.
 
     TRY.
 
@@ -451,6 +481,18 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
     DATA(l_include_name) = i_include_name.
 
     l_include_name = to_lower( condense( l_include_name ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_include_name
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Include { l_include_name } not found.|.
+      RETURN.
+    ENDIF.
 
     lt_checkrun_objects = VALUE #( ( object_reference-uri = |{ mc_uri }/{ l_include_name }|
                                      version = 'inactive' ) ).
@@ -1046,12 +1088,12 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
     DATA l_response TYPE string.
     DATA l_source   TYPE string.
 
-    DATA(l_read) = abap_false.
+    DATA(l_read) = abap_true.
     DATA(l_search) = abap_false.
     DATA(l_check) = abap_false.
     DATA(l_create) = abap_false.
     DATA(l_update) = abap_false.
-    DATA(l_activate) = abap_true.
+    DATA(l_activate) = abap_false.
 
     CASE abap_true.
 
