@@ -181,6 +181,29 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Package: { ls_tadir-devclass }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Original Language: { ls_tadir-masterlang }|.
 
+    NEW cl_adt_message_class_api( )->read(
+      EXPORTING
+        iv_name              = l_message_class
+        iv_fetch_master_lang = abap_true
+        iv_fetch_all         = abap_false
+      IMPORTING
+        rt_messages          = DATA(lt_messages)
+    ).
+
+    IF lt_messages IS INITIAL.
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Messages: the message class has no messages|.
+    ENDIF.
+
+    LOOP AT lt_messages ASSIGNING FIELD-SYMBOL(<ls_message>).
+
+      IF sy-tabix = 1.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Messages:|.
+      ENDIF.
+
+      r_response = |{ r_response }{ cl_abap_char_utilities=>newline } - '{ <ls_message>-msgnr }' { <ls_message>-text }|.
+
+    ENDLOOP.
+
   ENDMETHOD.
 
   METHOD search.
@@ -269,6 +292,13 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    SELECT SINGLE pgmid, object, obj_name, devclass
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_message_class
+      INTO @DATA(ls_tadir).
+
     DATA(l_transport_request) = i_transport_request.
 
     l_transport_request = condense( to_upper( l_transport_request ) ).
@@ -284,6 +314,7 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
 
     DATA(l_success) = lo_message_class_api->update_class( iv_msg_class_name    = CONV #( l_message_class )
                                                           iv_short_text        = i_description
+                                                          iv_package           = ls_tadir-devclass
                                                           iv_transport_request = l_transport_request ).
 
     IF l_success = abap_false.
@@ -512,6 +543,8 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
 
   METHOD read_message.
 
+    DATA l_language_out TYPE c LENGTH 2.
+
     DATA(l_message_class) = i_message_class.
     DATA(l_language) = i_language.
 
@@ -547,15 +580,24 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
         rv_message_text      = DATA(l_message_text)
     ).
 
+    CALL FUNCTION 'CONVERSION_EXIT_ISOLA_OUTPUT'
+      EXPORTING
+        input            = l_language
+      IMPORTING
+        output           = l_language_out
+      EXCEPTIONS
+        unknown_language = 0
+        OTHERS           = 0.
+
     IF l_message_text IS INITIAL.
-      r_response = |The message { i_message_number } has no text in language { l_language }.|.
+      r_response = |The message { i_message_number } has no text in language { l_language_out }.|.
       RETURN.
     ENDIF.
 
     r_response = |Message Class: { l_message_class }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Message Number: { i_message_number }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Message Text: { l_message_text }|.
-    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Language: { l_language }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Language: { l_language_out }|.
 
   ENDMETHOD.
 
@@ -646,6 +688,10 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
     DATA(l_language) = i_language.
 
     l_language = to_upper( l_language ).
+
+    IF l_language IS INITIAL.
+      l_language = ls_tadir-masterlang.
+    ENDIF.
 
     lt_message = VALUE #( ( message_no = i_message_number
                             text = i_message_text ) ).
