@@ -204,6 +204,7 @@ CLASS ycl_aai_fc_oo_interface_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_interface_name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.
@@ -272,6 +273,7 @@ CLASS ycl_aai_fc_oo_interface_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
+        AND delflag <> @abap_true
       INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
@@ -355,6 +357,7 @@ CLASS ycl_aai_fc_oo_interface_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_interface_name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.
@@ -418,6 +421,7 @@ CLASS ycl_aai_fc_oo_interface_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_interface_name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.

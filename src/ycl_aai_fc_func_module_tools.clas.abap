@@ -248,9 +248,11 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
+        AND delflag <> @abap_true
       INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
+      " No function group found in the package, so no function modules either.
       r_response = |No function module found in package { l_package }.|.
       RETURN.
     ENDIF.
@@ -264,6 +266,12 @@ CLASS ycl_aai_fc_func_module_tools IMPLEMENTATION.
       FOR ALL ENTRIES IN @lt_tadir
       WHERE pname = @lt_tadir-obj_name
       INTO TABLE @DATA(lt_tfdir).                       "#EC CI_GENBUFF
+
+    IF sy-subrc <> 0.
+      " No function modules found in the function groups
+      r_response = |No function module found in package { l_package }.|.
+      RETURN.
+    ENDIF.
 
     SORT lt_tfdir BY pname.
 

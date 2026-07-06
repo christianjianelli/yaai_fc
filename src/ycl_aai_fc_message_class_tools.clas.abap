@@ -18,6 +18,32 @@ CLASS ycl_aai_fc_message_class_tools DEFINITION
                 i_transport_request TYPE yde_aai_fc_transport_request
       RETURNING VALUE(r_response)   TYPE string.
 
+    METHODS read
+      IMPORTING
+                i_message_class   TYPE yde_aai_fc_message_class
+      RETURNING VALUE(r_response) TYPE string.
+
+    METHODS search
+      IMPORTING
+                i_package           TYPE packname
+                i_message_class     TYPE yde_aai_fc_message_class OPTIONAL
+                i_short_description TYPE as4text OPTIONAL
+      RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS update
+      IMPORTING
+                i_message_class     TYPE yde_aai_fc_message_class
+                i_description       TYPE as4text
+                i_transport_request TYPE yde_aai_fc_transport_request
+      RETURNING VALUE(r_response)   TYPE string.
+
+    METHODS read_message
+      IMPORTING
+                i_message_class   TYPE yde_aai_fc_message_class
+                i_message_number  TYPE symsgno
+                i_language        TYPE spras OPTIONAL
+      RETURNING VALUE(r_response) TYPE string.
+
     METHODS add_message
       IMPORTING
                 i_message_class     TYPE yde_aai_fc_message_class
@@ -119,6 +145,156 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD read.
+
+    CLEAR r_response.
+
+    DATA(l_message_class) = i_message_class.
+
+    l_message_class = condense( to_upper( l_message_class ) ).
+
+    SELECT SINGLE arbgb, masterlang
+      FROM t100a
+      WHERE arbgb = @l_message_class
+      INTO @DATA(ls_t100a).
+
+    IF sy-subrc <> 0.
+      r_response = |Message class { l_message_class } not found.|.
+      RETURN.
+    ENDIF.
+
+    SELECT SINGLE sprsl, arbgb, stext
+      FROM t100t
+      WHERE sprsl = @sy-langu
+        AND arbgb = @l_message_class
+      INTO @DATA(ls_t100t).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_message_class
+      INTO @DATA(ls_tadir).
+
+    r_response = |Message Class: { l_message_class }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_t100t-stext }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Package: { ls_tadir-devclass }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Original Language: { ls_tadir-masterlang }|.
+
+  ENDMETHOD.
+
+  METHOD search.
+
+    DATA: l_message_class     TYPE string,
+          l_short_description TYPE string.
+
+    CLEAR r_response.
+
+    DATA(l_package) = i_package.
+
+    l_package = condense( to_upper( l_package ) ).
+
+    SELECT pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND devclass = @l_package
+        AND delflag <> @abap_true
+      INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF
+
+    IF sy-subrc <> 0.
+      r_response = |No message class found.|.
+      RETURN.
+    ENDIF.
+
+    l_message_class = |*{ i_message_class }*|.
+
+    l_short_description = |*{ i_short_description }*|.
+
+    LOOP AT lt_tadir ASSIGNING FIELD-SYMBOL(<ls_tadir>).
+
+      IF l_message_class IS NOT INITIAL.
+
+        IF NOT <ls_tadir>-obj_name CP l_message_class.
+          CONTINUE.
+        ENDIF.
+
+      ENDIF.
+
+      SELECT SINGLE sprsl, arbgb, stext
+        FROM t100t
+        WHERE sprsl = @sy-langu
+          AND arbgb = @<ls_tadir>-obj_name
+         INTO @DATA(ls_t100t).
+
+      IF i_short_description IS NOT INITIAL.
+
+        IF NOT ls_t100t-stext CP l_short_description.
+          CONTINUE.
+        ENDIF.
+
+      ENDIF.
+
+      IF r_response IS NOT INITIAL.
+        r_response = |{ r_response }{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }|.
+      ENDIF.
+
+      r_response = |{ r_response }Message Class: { <ls_tadir>-obj_name }{ cl_abap_char_utilities=>newline }|.
+      r_response = |{ r_response }Description: { ls_t100t-stext }{ cl_abap_char_utilities=>newline }|.
+
+    ENDLOOP.
+
+    IF r_response IS INITIAL.
+      r_response = |No message class found.|.
+      RETURN.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD update.
+
+    CLEAR r_response.
+
+    DATA(l_message_class) = i_message_class.
+
+    l_message_class = condense( to_upper( l_message_class ) ).
+
+    SELECT SINGLE @abap_true
+      FROM t100a
+      WHERE arbgb = @l_message_class
+      INTO @DATA(l_exists).
+
+    IF sy-subrc <> 0.
+      r_response = |Message class { l_message_class } not found.|.
+      RETURN.
+    ENDIF.
+
+    DATA(l_transport_request) = i_transport_request.
+
+    l_transport_request = condense( to_upper( l_transport_request ) ).
+
+    DATA(lo_cts_api) = NEW ycl_aai_fc_cts_api( ).
+
+    IF lo_cts_api->is_valid( l_transport_request ) = abap_false.
+      r_response = |The transport request { l_transport_request } is invalid.|.
+      RETURN.
+    ENDIF.
+
+    DATA(lo_message_class_api) = NEW cl_adt_message_class_api( ).
+
+    DATA(l_success) = lo_message_class_api->update_class( iv_msg_class_name    = CONV #( l_message_class )
+                                                          iv_short_text        = i_description
+                                                          iv_transport_request = l_transport_request ).
+
+    IF l_success = abap_false.
+      r_response = |An error occurred while updating the message class { l_message_class }.|.
+      RETURN.
+    ENDIF.
+
+    r_response = |Message class { l_message_class } updated successfully.|.
+
+  ENDMETHOD.
+
   METHOD add_message.
 
     DATA l_msgnr TYPE symsgno.
@@ -145,7 +321,13 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_message_class
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Message class { l_message_class } not found.|.
+      RETURN.
+    ENDIF.
 
     l_msgnr = i_message_number.
 
@@ -207,7 +389,13 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_message_class
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Message class { l_message_class } not found.|.
+      RETURN.
+    ENDIF.
 
     lt_message = VALUE #( ( message_no = i_message_number text = i_message_text ) ).
 
@@ -251,7 +439,13 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_message_class
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Message class { l_message_class } not found.|.
+      RETURN.
+    ENDIF.
 
     DATA(lo_message_class_api) = NEW cl_adt_message_class_api( ).
 
@@ -276,6 +470,19 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
     DATA(l_message_class) = i_message_class.
 
     l_message_class = condense( to_upper( l_message_class ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_message_class
+        AND delflag <> @abap_true
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Message class { l_message_class } not found.|.
+      RETURN.
+    ENDIF.
 
     DATA(lo_message_class_api) = NEW cl_adt_message_class_api( ).
 
@@ -303,11 +510,73 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD read_message.
+
+    DATA(l_message_class) = i_message_class.
+    DATA(l_language) = i_language.
+
+    l_message_class = condense( to_upper( l_message_class ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_message_class
+        AND delflag <> @abap_true
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Message class { l_message_class } not found.|.
+      RETURN.
+    ENDIF.
+
+    IF l_language IS INITIAL.
+      l_language = ls_tadir-masterlang.
+    ENDIF.
+
+    DATA(lo_message_class_api) = NEW cl_adt_message_class_api( ).
+
+    lo_message_class_api->read(
+      EXPORTING
+        iv_name              = l_message_class
+        iv_number            = i_message_number
+        iv_language          = l_language
+        iv_fetch_master_lang = abap_false
+        iv_fetch_all         = abap_false
+      IMPORTING
+        rv_message_text      = DATA(l_message_text)
+    ).
+
+    IF l_message_text IS INITIAL.
+      r_response = |The message { i_message_number } has no text in language { l_language }.|.
+      RETURN.
+    ENDIF.
+
+    r_response = |Message Class: { l_message_class }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Message Number: { i_message_number }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Message Text: { l_message_text }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Language: { l_language }|.
+
+  ENDMETHOD.
+
   METHOD get_translation.
 
     DATA(l_message_class) = i_message_class.
 
     l_message_class = condense( to_upper( l_message_class ) ).
+
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_message_class
+        AND delflag <> @abap_true
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Message class { l_message_class } not found.|.
+      RETURN.
+    ENDIF.
 
     DATA(l_language) = i_language.
 
@@ -318,6 +587,7 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
     lo_message_class_api->read(
       EXPORTING
         iv_name              = l_message_class
+        iv_number            = i_message_number
         iv_language          = l_language
         iv_fetch_master_lang = abap_false
         iv_fetch_all         = abap_false
@@ -349,6 +619,19 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
 
     l_message_class = condense( to_upper( l_message_class ) ).
 
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_message_class
+        AND delflag <> @abap_true
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Message class { l_message_class } not found.|.
+      RETURN.
+    ENDIF.
+
     DATA(l_transport_request) = i_transport_request.
 
     l_transport_request = condense( to_upper( l_transport_request ) ).
@@ -363,13 +646,6 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
     DATA(l_language) = i_language.
 
     l_language = to_upper( l_language ).
-
-    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
-      FROM tadir
-      WHERE pgmid = @mc_pgmid
-        AND object = @mc_object
-        AND obj_name = @l_message_class
-      INTO @DATA(ls_tadir).
 
     lt_message = VALUE #( ( message_no = i_message_number
                             text = i_message_text ) ).
@@ -450,13 +726,16 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
+    DATA(l_read) = abap_false.
+    DATA(l_search) = abap_false.
+    DATA(l_update) = abap_true.
     DATA(l_read_all_messages) = abap_false.
     DATA(l_add_message) = abap_false.
     DATA(l_update_message) = abap_false.
     DATA(l_delete_message) = abap_false.
     DATA(l_get_next) = abap_false.
     DATA(l_get_translation) = abap_false.
-    DATA(l_set_translation) = abap_true.
+    DATA(l_set_translation) = abap_false.
 
     CASE abap_true.
 
@@ -468,6 +747,29 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
             i_description       = 'Testing ADT API'
             i_package           = 'Z001'
             i_transport_request = 'NPLK900137'
+        ).
+
+      WHEN l_read.
+
+        l_response = me->read(
+          EXPORTING
+            i_message_class = 'ZMSG002'
+        ).
+
+      WHEN l_search.
+
+        l_response = me->search(
+          EXPORTING
+            i_package = 'Z001'
+        ).
+
+      WHEN l_update.
+
+        l_response = me->update(
+          EXPORTING
+            i_message_class     = 'ZMSG002'
+            i_description       = 'Testing API update 2'
+            i_transport_request = 'NPLK900125'
         ).
 
       WHEN l_add_message.

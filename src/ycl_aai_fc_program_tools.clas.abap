@@ -142,6 +142,19 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
 
     l_program_name = to_upper( condense( l_program_name ) ).
 
+    SELECT SINGLE pgmid, object, obj_name, devclass, masterlang
+      FROM tadir
+      WHERE pgmid = @mc_pgmid
+        AND object = @mc_object
+        AND obj_name = @l_program_name
+        AND delflag <> @abap_true
+      INTO @DATA(ls_tadir).
+
+    IF sy-subrc <> 0.
+      r_response = |Program { l_program_name } not found.|.
+      RETURN.
+    ENDIF.
+
     IF me->_is_authorized( l_program_name ) = abap_false.
       r_response = |No authorization to read the program { i_program_name } source code.|.
       RETURN.
@@ -181,6 +194,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND devclass = @l_package
+        AND delflag <> @abap_true
       INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF
 
     IF sy-subrc <> 0.
@@ -328,6 +342,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_program_name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.
@@ -795,6 +810,7 @@ CLASS ycl_aai_fc_program_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_program_name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.

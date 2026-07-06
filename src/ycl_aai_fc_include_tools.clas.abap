@@ -148,6 +148,7 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_include_name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.
@@ -200,6 +201,7 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
       WHERE a~pgmid = @mc_pgmid
         AND a~object = @mc_object
         AND a~devclass = @l_package
+        AND a~delflag <> @abap_true
         AND b~subc = @cl_sedi_adt_res_source=>co_program_type_include
       INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF
 
@@ -287,6 +289,7 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @ls_incl_data-name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc = 0.
@@ -362,6 +365,7 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_include_name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.
@@ -487,6 +491,7 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_include_name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.
@@ -841,6 +846,7 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_include_name
+        AND delflag <> @abap_true
       INTO @DATA(ls_tadir).
 
     IF sy-subrc <> 0.

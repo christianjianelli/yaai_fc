@@ -132,6 +132,7 @@ CLASS ycl_aai_fc_structure_tools IMPLEMENTATION.
       WHERE pgmid = @mc_pgmid
         AND object = @mc_object
         AND obj_name = @l_structure_name
+        AND delflag <> @abap_true
       INTO @DATA(l_exists).
 
     IF sy-subrc = 0.
