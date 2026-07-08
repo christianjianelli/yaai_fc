@@ -657,6 +657,8 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
     DATA: lt_message TYPE if_adt_mc_res_controller=>tt_message_api,
           lt_e071    TYPE trwbo_t_e071.
 
+    DATA l_language_out TYPE c LENGTH 2.
+
     DATA(l_message_class) = i_message_class.
 
     l_message_class = condense( to_upper( l_message_class ) ).
@@ -706,8 +708,17 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
                         iv_package           = ls_tadir-devclass
                       ).
 
+    CALL FUNCTION 'CONVERSION_EXIT_ISOLA_OUTPUT'
+      EXPORTING
+        input            = l_language
+      IMPORTING
+        output           = l_language_out
+      EXCEPTIONS
+        unknown_language = 0
+        OTHERS           = 0.
+
     IF l_success = abap_false.
-      r_response = |An error occurred while updating the message { i_message_number } in language { l_language }.|.
+      r_response = |An error occurred while updating the message { i_message_number } in language { l_language_out }.|.
       RETURN.
     ENDIF.
 
@@ -725,9 +736,9 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
     ).
 
     IF l_success = abap_true.
-      r_response = |Translation updated successfully. Message: { i_message_number }. Target language: { l_language }.|.
+      r_response = |Translation updated successfully. Message: { i_message_number }. Target language: { l_language_out }.|.
     ELSE.
-      r_response = |Translation updated but it was not added to the transport request { l_transport_request }. Message: { i_message_number }. Target language: { l_language }.|.
+      r_response = |Translation updated but it was not added to the transport request { l_transport_request }. Message: { i_message_number }. Target language: { l_language_out }.|.
     ENDIF.
 
   ENDMETHOD.
