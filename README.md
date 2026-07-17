@@ -167,26 +167,26 @@ Detailed documentation for each tool is available in the `docs/instructions/` di
 - [Structure Tools](docs/instructions/ddic-structure-tools.md)
 - [Table Tools](docs/instructions/ddic-table-tools.md)
 - [Table Type Tools](docs/instructions/ddic-table-type-tools.md)
-- [CDS View Tools (WIP)](/#)
+- [CDS View Tools (WIP)](./)
 
 ### SQL Tools
 
-- [SQL Tools (WIP)](/#)
+- [SQL Tools (WIP)](./)
 
 ### Development Artifacts
 
 - [Message Class Tools](docs/instructions/message-class-tools.md)
-- [Transaction Tools (WIP)](/#)
+- [Transaction Tools (WIP)](./)
 
 ### ABAP Source Code Tools
 
-- [Class Tools (WIP)](/#)
-- [Interface Tools (WIP)](/#)
-- [Program Tools (WIP)](/#)
-- [Include Tools (WIP)](/#)
+- [Class Tools (WIP)](./)
+- [Interface Tools (WIP)](./)
+- [Program Tools (WIP)](./)
+- [Include Tools (WIP)](./)
 - [Text Pool Tools](docs/instructions/text-pool-tools.md)
-- [Function Group Tools (WIP)](/#)
-- [Function Module Tools (WIP)](/#)
+- [Function Group Tools (WIP)](./)
+- [Function Module Tools (WIP)](./)
 
 ### Transport Management
 
@@ -194,13 +194,13 @@ Detailed documentation for each tool is available in the `docs/instructions/` di
 
 ### ABAP Runtime Errors (ST22)
 
-- [Runtime Errors Tools (WIP)](/#)
+- [Runtime Errors Tools (WIP)](./)
 
 ### ABAP Test Cockpit (ATC) and Code Inspector Tools
 
-- [ATC Tools (WIP)](/#)
-- [Code Inspector Tools (WIP)](/#)
+- [ATC Tools (WIP)](./)
+- [Code Inspector Tools (WIP)](./)
 
 ### Emails
 
-- [Send Email Tool (WIP)](/#)  
+- [Send Email Tool (WIP)](./)  
