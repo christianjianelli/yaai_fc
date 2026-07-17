@@ -135,7 +135,7 @@ Classes
 
 ## Usage via MCP
 
-The tools available in this library can also be used through MCP clients, although they are not directly exposed. To use them via an MCP client, you must install the [ABAP AI Tool MCP](https://github.com/christianjianelli/yaai_mcp) library on your SAP backend and the [abap-mcp-server](https://github.com/christianjianelli/yaai_mcp) on your local machine.
+The tools available in this library can also be used through MCP clients, although they are not directly exposed. To use them via an MCP client, you must install the [ABAP AI tools - MCP tools](https://github.com/christianjianelli/yaai_mcp) library on your SAP backend and the [abap-mcp-server](https://github.com/christianjianelli/abap-mcp-server) on your local machine.
 
 ## Usage for AI Agents
 
