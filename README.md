@@ -59,6 +59,9 @@ This library is part of the [ABAP AI tools](https://github.com/christianjianelli
   - Manage text symbols for programs/reports
   - Manage translations for text symbols and selection texts
 
+- **Transactions** (`YCL_AAI_FC_TRANSACTION_TOOLS`)
+  - Read, search, create, translate ABAP Transactions (Report and Dialog types)
+
 ### Transport Management
 
 - **Transport Requests** (`YCL_AAI_FC_TRANSPORT_TOOLS`)
@@ -68,16 +71,22 @@ This library is part of the [ABAP AI tools](https://github.com/christianjianelli
 ### ABAP Source Code Tools
 
 - **ABAP Class** (`YCL_AAI_FC_OO_CLASS_TOOLS`)
-  - Read ABAP class source code
+  - Read, search, create, update, check, activate ABAP Classes
 
 - **ABAP Interface** (`YCL_AAI_FC_OO_INTERFACE_TOOLS`)
-  - Read ABAP interface source code
+  - Read, search, create, update, check, activate ABAP Interfaces
 
-- **ABAP Program/Include** (`YCL_AAI_FC_PROGRAM_TOOLS`)
-  - Read ABAP program/include source code
+- **ABAP Program** (`YCL_AAI_FC_PROGRAM_TOOLS`)
+  - Read, search, create, update, check, activate ABAP Programs
+
+- **ABAP Include** (`YCL_AAI_FC_INCLUDE_TOOLS`)
+  - Read, search, create, update, check, activate ABAP Includes
+
+- **ABAP Function Group** (`YCL_AAI_FC_FUNC_GROUP_TOOLS`)
+  - Read, search, create, update, check, activate ABAP Function Groups
 
 - **ABAP Function Module** (`YCL_AAI_FC_FUNC_MODULE_TOOLS`)
-  - Read ABAP function module source code
+  - Read, search, create, update, check, activate ABAP Function Modules
 
 ### ABAP Runtime Errors (ST22)
 
@@ -112,12 +121,21 @@ Classes
 └── YCL_AAI_FC_TRANSPORT_TOOLS      # Transport request management
 └── YCL_AAI_FC_OO_CLASS_TOOLS       # ABAP Class
 └── YCL_AAI_FC_OO_INTERFACE_TOOLS   # ABAP Interface
-└── YCL_AAI_FC_OO_PROGRAM_TOOLS     # ABAP Program/Include
+└── YCL_AAI_FC_OO_PROGRAM_TOOLS     # ABAP Program
+└── YCL_AAI_FC_OO_INCLUDE_TOOLS     # ABAP Include
+└── YCL_AAI_FC_TRANSACTION_TOOLS    # ABAP Transaction
 └── YCL_AAI_FC_OO_FUNC_MODULE_TOOLS # ABAP Function Module
+└── YCL_AAI_FC_FUNC_GROUP_TOOLS     # ABAP Function Group
+└── YCL_AAI_FC_ABAP_ACTIVATE        # ABAP Mass Activation 
 └── YCL_AAI_FC_RUNTIME_ERROR_TOOLS  # ABAP Runtime Errors
 └── YCL_AAI_FC_ATC_TOOLS            # ABAP Test Cockpit (ATC)
 └── YCL_AAI_FC_CI_TOOLS             # Code Inspector
+└── YCL_AAI_FC_EMAIL_TOOLS          # Send Email 
 ```
+
+## Usage via MCP
+
+The tools available in this library can also be used through MCP clients, although they are not directly exposed. To use them via an MCP client, you must install the [ABAP AI Tool MCP](https://github.com/christianjianelli/yaai_mcp) library on your SAP backend and the [abap-mcp-server](https://github.com/christianjianelli/yaai_mcp) on your local machine.
 
 ## Usage for AI Agents
 
