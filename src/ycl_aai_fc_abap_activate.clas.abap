@@ -124,20 +124,41 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
           p_error_tab = DATA(lt_errors)                 " Error Message Table
       ).
 
+      READ TABLE lt_errors TRANSPORTING NO FIELDS
+        WITH KEY mtype = 'E'.
+
+      IF sy-subrc = 0.
+        DATA(l_mtype) = 'E'.
+      ELSE.
+
+        READ TABLE lt_errors TRANSPORTING NO FIELDS
+          WITH KEY mtype = 'W'.
+
+        IF sy-subrc = 0.
+          l_mtype = 'W'.
+        ENDIF.
+
+      ENDIF.
+
       LOOP AT lt_errors ASSIGNING FIELD-SYMBOL(<ls_error>).
 
         IF sy-tabix = 1.
-          r_response = |Error(s) occurred while activating DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          IF l_mtype = 'W'.
+            r_response = |Warning(s) occurred while activating the DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          ELSE.
+            r_response = |Error(s) occurred while activating the DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          ENDIF.
         ENDIF.
 
         IF <ls_error>-edit_req IS BOUND.
-          r_response = |{ r_response }Object: { <ls_error>-edit_req->object_name }{ cl_abap_char_utilities=>newline }|.
-          r_response = |{ r_response }{ <ls_error>-edit_req->object_state->get_description( ) }{ cl_abap_char_utilities=>newline }|.
-        ENDIF.
 
-        LOOP AT <ls_error>-mtext ASSIGNING FIELD-SYMBOL(<l_mtext>).
-          r_response = |{ r_response }{ <l_mtext> }{ cl_abap_char_utilities=>newline }|.
-        ENDLOOP.
+          r_response = |{ r_response }Object: { <ls_error>-edit_req->object_name }{ cl_abap_char_utilities=>newline }|.
+
+          IF <ls_error>-edit_req->object_state IS BOUND.
+            r_response = |{ r_response }{ <ls_error>-edit_req->object_state->get_description( ) }{ cl_abap_char_utilities=>newline }|.
+          ENDIF.
+
+        ENDIF.
 
         IF <ls_error>-message-msgid IS NOT INITIAL AND
            <ls_error>-message-msgty IS NOT INITIAL AND
@@ -153,6 +174,12 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
             INTO DATA(l_message).
 
           r_response = |{ r_response }{ l_message }{ cl_abap_char_utilities=>newline }|.
+
+        ELSE.
+
+          LOOP AT <ls_error>-mtext ASSIGNING FIELD-SYMBOL(<l_mtext>).
+            r_response = |{ r_response }{ <l_mtext> }{ cl_abap_char_utilities=>newline }|.
+          ENDLOOP.
 
         ENDIF.
 
@@ -224,20 +251,43 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
           p_error_tab = lt_errors               " Error Message Table
       ).
 
+      CLEAR l_mtype.
+
+      READ TABLE lt_errors TRANSPORTING NO FIELDS
+        WITH KEY mtype = 'E'.
+
+      IF sy-subrc = 0.
+        l_mtype = 'E'.
+      ELSE.
+
+        READ TABLE lt_errors TRANSPORTING NO FIELDS
+          WITH KEY mtype = 'W'.
+
+        IF sy-subrc = 0.
+          l_mtype = 'W'.
+        ENDIF.
+
+      ENDIF.
+
       LOOP AT lt_errors ASSIGNING <ls_error>.
 
         IF sy-tabix = 1.
-          r_response = |Error(s) occurred while activating the Non-DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          IF l_mtype = 'W'.
+            r_response = |Warning(s) occurred while activating the Non-DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          ELSE.
+            r_response = |Error(s) occurred while activating the Non-DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          ENDIF.
         ENDIF.
 
         IF <ls_error>-edit_req IS BOUND.
-          r_response = |{ r_response }Object: { <ls_error>-edit_req->object_name }{ cl_abap_char_utilities=>newline }|.
-          r_response = |{ r_response }{ <ls_error>-edit_req->object_state->get_description( ) }{ cl_abap_char_utilities=>newline }|.
-        ENDIF.
 
-        LOOP AT <ls_error>-mtext ASSIGNING <l_mtext>.
-          r_response = |{ r_response }{ <l_mtext> }{ cl_abap_char_utilities=>newline }|.
-        ENDLOOP.
+          r_response = |{ r_response }Object: { <ls_error>-edit_req->object_name }{ cl_abap_char_utilities=>newline }|.
+
+          IF <ls_error>-edit_req->object_state IS BOUND.
+            r_response = |{ r_response }{ <ls_error>-edit_req->object_state->get_description( ) }{ cl_abap_char_utilities=>newline }|.
+          ENDIF.
+
+        ENDIF.
 
         IF <ls_error>-message-msgid IS NOT INITIAL AND
            <ls_error>-message-msgty IS NOT INITIAL AND
@@ -253,6 +303,12 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
             INTO l_message.
 
           r_response = |{ r_response }{ l_message }{ cl_abap_char_utilities=>newline }|.
+
+        ELSE.
+
+          LOOP AT <ls_error>-mtext ASSIGNING <l_mtext>.
+            r_response = |{ r_response }{ <l_mtext> }{ cl_abap_char_utilities=>newline }|.
+          ENDLOOP.
 
         ENDIF.
 
@@ -322,20 +378,41 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
           p_error_tab = DATA(lt_errors)                 " Error Message Table
       ).
 
+      READ TABLE lt_errors TRANSPORTING NO FIELDS
+        WITH KEY mtype = 'E'.
+
+      IF sy-subrc = 0.
+        DATA(l_mtype) = 'E'.
+      ELSE.
+
+        READ TABLE lt_errors TRANSPORTING NO FIELDS
+          WITH KEY mtype = 'W'.
+
+        IF sy-subrc = 0.
+          l_mtype = 'W'.
+        ENDIF.
+
+      ENDIF.
+
       LOOP AT lt_errors ASSIGNING FIELD-SYMBOL(<ls_error>).
 
         IF sy-tabix = 1.
-          r_response = |Error(s) occurred while activating the DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          IF l_mtype = 'W'.
+            r_response = |Warning(s) occurred while activating the DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          ELSE.
+            r_response = |Error(s) occurred while activating the DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          ENDIF.
         ENDIF.
 
         IF <ls_error>-edit_req IS BOUND.
-          r_response = |{ r_response }Object: { <ls_error>-edit_req->object_name }{ cl_abap_char_utilities=>newline }|.
-          r_response = |{ r_response }{ <ls_error>-edit_req->object_state->get_description( ) }{ cl_abap_char_utilities=>newline }|.
-        ENDIF.
 
-        LOOP AT <ls_error>-mtext ASSIGNING FIELD-SYMBOL(<l_mtext>).
-          r_response = |{ r_response }{ <l_mtext> }{ cl_abap_char_utilities=>newline }|.
-        ENDLOOP.
+          r_response = |{ r_response }Object: { <ls_error>-edit_req->object_name }{ cl_abap_char_utilities=>newline }|.
+
+          IF <ls_error>-edit_req->object_state IS BOUND.
+            r_response = |{ r_response }{ <ls_error>-edit_req->object_state->get_description( ) }{ cl_abap_char_utilities=>newline }|.
+          ENDIF.
+
+        ENDIF.
 
         IF <ls_error>-message-msgid IS NOT INITIAL AND
            <ls_error>-message-msgty IS NOT INITIAL AND
@@ -351,6 +428,12 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
             INTO DATA(l_message).
 
           r_response = |{ r_response }{ l_message }{ cl_abap_char_utilities=>newline }|.
+
+        ELSE.
+
+          LOOP AT <ls_error>-mtext ASSIGNING FIELD-SYMBOL(<l_mtext>).
+            r_response = |{ r_response }{ <l_mtext> }{ cl_abap_char_utilities=>newline }|.
+          ENDLOOP.
 
         ENDIF.
 
@@ -411,20 +494,41 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
           p_error_tab = lt_errors               " Error Message Table
       ).
 
+      READ TABLE lt_errors TRANSPORTING NO FIELDS
+        WITH KEY mtype = 'E'.
+
+      IF sy-subrc = 0.
+        l_mtype = 'E'.
+      ELSE.
+
+        READ TABLE lt_errors TRANSPORTING NO FIELDS
+          WITH KEY mtype = 'W'.
+
+        IF sy-subrc = 0.
+          l_mtype = 'W'.
+        ENDIF.
+
+      ENDIF.
+
       LOOP AT lt_errors ASSIGNING <ls_error>.
 
         IF sy-tabix = 1.
-          r_response = |Error(s) occurred while activating the Non-DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          IF l_mtype = 'W'.
+            r_response = |Warning(s) occurred while activating the Non-DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          ELSE.
+            r_response = |Error(s) occurred while activating the Non-DDIC objects.{ cl_abap_char_utilities=>newline }|.
+          ENDIF.
         ENDIF.
 
         IF <ls_error>-edit_req IS BOUND.
-          r_response = |{ r_response }Object: { <ls_error>-edit_req->object_name }{ cl_abap_char_utilities=>newline }|.
-          r_response = |{ r_response }{ <ls_error>-edit_req->object_state->get_description( ) }{ cl_abap_char_utilities=>newline }|.
-        ENDIF.
 
-        LOOP AT <ls_error>-mtext ASSIGNING <l_mtext>.
-          r_response = |{ r_response }{ <l_mtext> }{ cl_abap_char_utilities=>newline }|.
-        ENDLOOP.
+          r_response = |{ r_response }Object: { <ls_error>-edit_req->object_name }{ cl_abap_char_utilities=>newline }|.
+
+          IF <ls_error>-edit_req->object_state IS BOUND.
+            r_response = |{ r_response }{ <ls_error>-edit_req->object_state->get_description( ) }{ cl_abap_char_utilities=>newline }|.
+          ENDIF.
+
+        ENDIF.
 
         IF <ls_error>-message-msgid IS NOT INITIAL AND
            <ls_error>-message-msgty IS NOT INITIAL AND
@@ -440,6 +544,12 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
             INTO l_message.
 
           r_response = |{ r_response }{ l_message }{ cl_abap_char_utilities=>newline }|.
+
+        ELSE.
+
+          LOOP AT <ls_error>-mtext ASSIGNING <l_mtext>.
+            r_response = |{ r_response }{ <l_mtext> }{ cl_abap_char_utilities=>newline }|.
+          ENDLOOP.
 
         ENDIF.
 
