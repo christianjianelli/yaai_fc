@@ -43,6 +43,12 @@ CLASS ycl_aai_fc_transport_tools DEFINITION
                 i_transport_request TYPE yde_aai_fc_transport_request
       RETURNING VALUE(r_response)   TYPE string.
 
+    METHODS get_current_transport_request
+      IMPORTING
+                i_object_type     TYPE e071-object
+                i_object_name     TYPE e071-obj_name
+      RETURNING VALUE(r_response) TYPE string.
+
   PROTECTED SECTION.
 
   PRIVATE SECTION.
@@ -51,7 +57,7 @@ ENDCLASS.
 
 
 
-CLASS YCL_AAI_FC_TRANSPORT_TOOLS IMPLEMENTATION.
+CLASS ycl_aai_fc_transport_tools IMPLEMENTATION.
 
 
   METHOD change_description.
@@ -131,8 +137,8 @@ CLASS YCL_AAI_FC_TRANSPORT_TOOLS IMPLEMENTATION.
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_false.
-    DATA(l_search) = abap_true.
+    DATA(l_read) = abap_true.
+    DATA(l_search) = abap_false.
 
     CASE abap_true.
 
@@ -158,7 +164,7 @@ CLASS YCL_AAI_FC_TRANSPORT_TOOLS IMPLEMENTATION.
 
       WHEN l_read.
 
-        l_response = me->read( 'NPLK900129' ).
+        l_response = me->read( 'NPLK900110' ).
 
     ENDCASE.
 
@@ -193,9 +199,16 @@ CLASS YCL_AAI_FC_TRANSPORT_TOOLS IMPLEMENTATION.
 
     DATA(l_status) = COND string( WHEN ls_header-trstatus = 'D' THEN 'Modifiable' ELSE 'Released' ).
 
+    DATA(l_user) = CONV string( ls_header-as4user ).
+
+    IF sy-uname = ls_header-as4user.
+      l_user = |{ l_user } (the current username you are logged in as)|.
+    ENDIF.
+
     r_response = |Transport request: { l_transport_request }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Description: { ls_header-as4text }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Status: { l_status }|.
+    r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Owner (username): { l_user }|.
     r_response = |{ r_response }{ cl_abap_char_utilities=>newline }Objects:|.
 
     LOOP AT lt_objects ASSIGNING FIELD-SYMBOL(<ls_object>).
@@ -331,6 +344,26 @@ CLASS YCL_AAI_FC_TRANSPORT_TOOLS IMPLEMENTATION.
     ENDIF.
 
     r_response = 'Here is the list of the modifiable transport requests found:' && r_response.
+
+  ENDMETHOD.
+
+  METHOD get_current_transport_request.
+
+    DATA(l_object_name) = i_object_name.
+    DATA(l_object_type) = i_object_type.
+
+    l_object_name = to_lower( condense( l_object_name ) ).
+    l_object_type = to_lower( condense( l_object_type ) ).
+
+    NEW ycl_aai_fc_cts_api( )->get_current_transport_request(
+      EXPORTING
+        i_object_name       = l_object_name
+        i_object            = l_object_type
+      IMPORTING
+        e_transport_request = DATA(l_transport_request)
+    ).
+
+    r_response = l_transport_request.
 
   ENDMETHOD.
 ENDCLASS.

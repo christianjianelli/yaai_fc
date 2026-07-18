@@ -79,7 +79,7 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
           WHERE object = @<ls_transport_request_object>-object
             AND obj_name = @<ls_transport_request_object>-obj_name
             AND delflag <> @abap_true
-           INTO @DATA(l_exists).
+           INTO @DATA(l_exists). "#EC CI_GENBUFF
 
         IF sy-subrc <> 0.
           CONTINUE.
@@ -204,7 +204,7 @@ CLASS ycl_aai_fc_abap_activate IMPLEMENTATION.
           WHERE object = @<ls_transport_request_object>-object
             AND obj_name = @<ls_transport_request_object>-obj_name
             AND delflag <> @abap_true
-           INTO @l_exists.
+           INTO @l_exists. "#EC CI_GENBUFF
 
         IF sy-subrc <> 0.
           CONTINUE.

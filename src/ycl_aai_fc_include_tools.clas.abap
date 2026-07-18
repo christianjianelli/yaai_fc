@@ -203,7 +203,7 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
         AND a~devclass = @l_package
         AND a~delflag <> @abap_true
         AND b~subc = @cl_sedi_adt_res_source=>co_program_type_include
-      INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF
+      INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF #EC CI_BUFFJOIN
 
     IF sy-subrc <> 0.
       r_response = |No include found in package { l_package }.|.

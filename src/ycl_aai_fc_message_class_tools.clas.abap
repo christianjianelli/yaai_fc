@@ -582,12 +582,9 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
 
     CALL FUNCTION 'CONVERSION_EXIT_ISOLA_OUTPUT'
       EXPORTING
-        input            = l_language
+        input  = l_language
       IMPORTING
-        output           = l_language_out
-      EXCEPTIONS
-        unknown_language = 0
-        OTHERS           = 0.
+        output = l_language_out.
 
     IF l_message_text IS INITIAL.
       r_response = |The message { i_message_number } has no text in language { l_language_out }.|.
@@ -710,12 +707,9 @@ CLASS ycl_aai_fc_message_class_tools IMPLEMENTATION.
 
     CALL FUNCTION 'CONVERSION_EXIT_ISOLA_OUTPUT'
       EXPORTING
-        input            = l_language
+        input  = l_language
       IMPORTING
-        output           = l_language_out
-      EXCEPTIONS
-        unknown_language = 0
-        OTHERS           = 0.
+        output = l_language_out.
 
     IF l_success = abap_false.
       r_response = |An error occurred while updating the message { i_message_number } in language { l_language_out }.|.

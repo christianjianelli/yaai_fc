@@ -69,7 +69,7 @@ CLASS ycl_aai_fc_cts_api DEFINITION
     METHODS get_current_transport_request
       IMPORTING
         i_object_name       TYPE csequence
-        i_pgmid             TYPE e071-pgmid
+        i_pgmid             TYPE e071-pgmid OPTIONAL
         i_object            TYPE e071-object
       EXPORTING
         e_transport_request TYPE trkorr.
@@ -365,6 +365,12 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
 
   METHOD get_current_transport_request.
 
+    DATA lt_rng_pgmid TYPE RANGE OF e071-pgmid.
+
+    IF i_pgmid IS SUPPLIED.
+      APPEND VALUE #( sign = 'I' option = 'EQ' low = i_pgmid ) TO lt_rng_pgmid.
+    ENDIF.
+
     " Get current transport request from task assignment
     SELECT a~trkorr, a~pgmid, a~object, a~obj_name, b~trfunction, b~strkorr, c~trkorr AS transport_request
       FROM e071 AS a
@@ -372,7 +378,7 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
       ON a~trkorr = b~trkorr
       INNER JOIN e070 AS c
       ON b~strkorr = c~trkorr
-      WHERE a~pgmid = @i_pgmid
+      WHERE a~pgmid IN @lt_rng_pgmid
         AND a~object = @i_object
         AND a~obj_name = @i_object_name
         AND c~trstatus = 'D'
@@ -391,7 +397,7 @@ CLASS ycl_aai_fc_cts_api IMPLEMENTATION.
       FROM e071 AS a
       INNER JOIN e070 AS b
       ON a~trkorr = b~trkorr
-      WHERE a~pgmid = @i_pgmid
+      WHERE a~pgmid IN @lt_rng_pgmid
         AND a~object = @i_object
         AND a~obj_name = @i_object_name
         AND b~trstatus = 'D'
