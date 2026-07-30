@@ -202,7 +202,7 @@ CLASS ycl_aai_fc_include_tools IMPLEMENTATION.
         AND a~object = @mc_object
         AND a~devclass = @l_package
         AND a~delflag <> @abap_true
-        AND b~subc = @cl_sedi_adt_res_source=>co_program_type_include
+        AND b~subc = 'I'
       INTO TABLE @DATA(lt_tadir).                       "#EC CI_GENBUFF #EC CI_BUFFJOIN
 
     IF sy-subrc <> 0.
