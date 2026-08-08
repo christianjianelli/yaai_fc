@@ -42,9 +42,9 @@ CLASS ycl_aai_fc_data_element_tools DEFINITION
       IMPORTING
                 i_data_element_name TYPE yde_aai_fc_data_element
                 i_short_description TYPE as4text OPTIONAL
-                i_domain_name       TYPE yde_aai_fc_domain
-                i_data_type         TYPE yde_aai_fc_data_type
-                i_length            TYPE yde_aai_fc_length
+                i_domain_name       TYPE yde_aai_fc_domain OPTIONAL
+                i_data_type         TYPE yde_aai_fc_data_type OPTIONAL
+                i_length            TYPE yde_aai_fc_length OPTIONAL
                 i_decimals          TYPE yde_aai_fc_decimals OPTIONAL
                 i_label_short       TYPE scrtext_s OPTIONAL
                 i_label_medium      TYPE scrtext_m OPTIONAL
@@ -531,7 +531,7 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
 
     ls_data_element-rollname = l_data_element.
 
-    ls_data_element-domname = condense( to_upper( i_domain_name ) ).
+    ls_data_element-ddlanguage = ls_tadir-masterlang.
 
     IF i_short_description IS NOT INITIAL.
       ls_data_element-ddtext = i_short_description.
@@ -553,9 +553,18 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
       ls_data_element-scrtext_l = i_label_long.
     ENDIF.
 
-    ls_data_element-datatype = l_data_type.
-    ls_data_element-leng = i_length.
-    ls_data_element-outputlen = i_length.
+    IF i_domain_name IS NOT INITIAL.
+      ls_data_element-domname = condense( to_upper( i_domain_name ) ).
+    ENDIF.
+
+    IF l_data_type IS NOT INITIAL.
+      ls_data_element-datatype = l_data_type.
+    ENDIF.
+
+    IF i_length IS NOT INITIAL.
+      ls_data_element-leng = i_length.
+      ls_data_element-outputlen = i_length.
+    ENDIF.
 
     IF i_short_description IS NOT INITIAL.
       ls_data_element-decimals = i_decimals.
@@ -999,8 +1008,9 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
     DATA l_response TYPE string.
 
     DATA(l_create) = abap_false.
-    DATA(l_read) = abap_true.
+    DATA(l_read) = abap_false.
     DATA(l_search) = abap_false.
+    DATA(l_update) = abap_true.
     DATA(l_delete) = abap_false.
     DATA(l_get_translation) = abap_false.
     DATA(l_set_translation) = abap_false.
@@ -1038,6 +1048,25 @@ CLASS ycl_aai_fc_data_element_tools IMPLEMENTATION.
                        i_data_element_name = 'BUS'
 *                       i_short_description =
                      ).
+
+      WHEN l_update.
+
+        me->update(
+          EXPORTING
+            i_data_element_name = 'ZDE_PRICE'
+            i_short_description = 'Preço'
+            i_domain_name       = 'WERT7'
+*            i_data_type         =
+*            i_length            =
+*            i_decimals          =
+            i_label_short       = 'Preço'
+            i_label_medium      = 'Preço'
+            i_label_long        = 'Preço'
+            i_label_heading     = 'Preço'
+            i_transport_request = 'NPLK900133'
+          RECEIVING
+            r_response          = l_response
+        ).
 
       WHEN l_delete.
 
